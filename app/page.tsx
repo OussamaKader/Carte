@@ -78,7 +78,7 @@ const translations = {
     numberLabel: 'رقم العضو',
     numberPlaceholder: 'مثال: 47185763',
     cityLabel: 'المدينة',
-    download: 'تحميل البطاقة',
+    download: 'تحميل البطاقة ',
     success: ' تم إنشاء البطاقة بنجاح!',
     error: 'خطأ في التسجيل',
     cardBadge: 'البطاقة الرسمية',

@@ -22,7 +22,7 @@ const footerContent = {
       phone: '+222 36 42 71 79',
     },
     copyright:
-      '© 2025 AEM — Association des Étudiants Mauritaniens au Maroc. Tous droits réservés.',
+      '© 2026 AEM — Association des Étudiants Mauritaniens au Maroc. Tous droits réservés.',
   },
   ar: {
     description:
@@ -39,7 +39,7 @@ const footerContent = {
       phone: '+222 36 42 71 79',
     },
     copyright:
-      '© 2025 AEM — جمعية الطلاب الموريتانيين في المغرب. جميع الحقوق محفوظة.',
+      '© 2026 AEM — جمعية الطلاب الموريتانيين في المغرب. جميع الحقوق محفوظة.',
   },
 };
 
