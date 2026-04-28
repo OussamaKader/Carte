@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useRef } from 'react';
-import { toPng } from 'html-to-image';
+import html2canvas from 'html2canvas';
 import './page.css';
 import { supabase } from './supabaseClient';
 import Header from './Header';
@@ -294,113 +294,96 @@ export default function Home() {
       return;
     }
 
-    // ── Helper : URL → base64 via fetch (contourne CORS sur iOS/Android) ──
-    const urlToBase64 = (url: string): Promise<string> =>
-      fetch(url)
-        .then(r => r.blob())
-        .then(blob => new Promise<string>((res, rej) => {
+    // ── Helper fetch → base64 (fonctionne sur iOS/Android) ──
+    const urlToBase64 = async (url: string): Promise<string> => {
+      try {
+        const r = await fetch(url);
+        const blob = await r.blob();
+        return await new Promise<string>((res, rej) => {
           const reader = new FileReader();
           reader.onload = () => res(reader.result as string);
           reader.onerror = rej;
           reader.readAsDataURL(blob);
-        }))
-        .catch(() => url); // fallback : URL originale
+        });
+      } catch {
+        return url;
+      }
+    };
 
-    // ── 1. Pré-charger logo en base64 (photo est déjà base64 depuis FileReader) ──
+    // ── 1. Convertir logo en base64 AVANT tout ──
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // ── 2. Créer le wrapper temporaire hors écran ──
-    const tempWrapper = document.createElement('div');
-    tempWrapper.style.cssText = `
+    // ── 2. Mettre à jour les images dans le composant caché #card-export ──
+    //    (pas dans un clone — directement dans le DOM existant)
+    const cardExport = document.getElementById('card-export');
+    if (!cardExport) return;
+
+    // Sauvegarder les srcs originaux pour restaurer après
+    const logoOriginal = cardExport.querySelector('.logo-right') as HTMLImageElement | null;
+    const photoOriginal = cardExport.querySelector('.member-photo') as HTMLImageElement | null;
+
+    const prevLogoSrc = logoOriginal?.src ?? '';
+    const prevPhotoSrc = photoOriginal?.src ?? '';
+
+    // Injecter base64 directement dans le DOM caché
+    if (logoOriginal) logoOriginal.src = logoB64;
+    if (photoOriginal && photo) photoOriginal.src = photo;
+
+    // Attendre que les images soient chargées
+    await document.fonts.ready;
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    // ── 3. Rendre visible temporairement pour html2canvas ──
+    const wrapper = document.getElementById('card-export-wrapper') as HTMLElement;
+    const prevWrapperStyle = wrapper.style.cssText;
+
+    wrapper.style.cssText = `
     position: fixed;
-    top: -99999px;
-    left: -99999px;
+    top: -9999px;
+    left: -9999px;
     width: 1560px;
     height: 940px;
+    overflow: visible;
     pointer-events: none;
     z-index: 9999;
   `;
-    document.body.appendChild(tempWrapper);
 
-    const tempCard = document.createElement('div');
-    tempCard.style.cssText = `
-    width: 1560px;
-    height: 940px;
-    background: #dde1e8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `;
-    tempWrapper.appendChild(tempCard);
-
-    const original = document.getElementById('card-export');
-    if (!original) { document.body.removeChild(tempWrapper); return; }
-
-    const clone = original.cloneNode(true) as HTMLElement;
-    tempCard.appendChild(clone);
-
-    // ── 3. Injecter les images base64 directement dans le clone ──
-
-    // Photo de profil (déjà en base64 dans le state `photo`)
-    if (photo) {
-      const photoEl = clone.querySelector('.member-photo') as HTMLImageElement | null;
-      if (photoEl) {
-        photoEl.src = photo; // base64 direct, pas besoin de conversion
-      }
-    }
-
-    // Logo AEM (converti en base64 via fetch)
-    const logoEl = clone.querySelector('.logo-right') as HTMLImageElement | null;
-    if (logoEl) {
-      logoEl.src = logoB64;
-    }
-
-    // ── 4. Attendre que toutes les <img> du clone soient chargées ──
-    await document.fonts.ready;
-
-    const allImgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[];
-    await Promise.all(
-      allImgs.map(img =>
-        img.complete
-          ? Promise.resolve()
-          : new Promise<void>(resolve => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve(); // ne pas bloquer si erreur
-          })
-      )
-    );
-
-    // Délai rendu CSS (important sur mobile)
-    await new Promise(resolve => setTimeout(resolve, 600));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
-      // Premier passage : chauffe le cache interne de html-to-image
-      await toPng(tempCard, {
-        pixelRatio: 1,
+      const canvas = await html2canvas(cardExport, {
         width: 1560,
         height: 940,
-        skipFonts: true,
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#dde1e8',
+        logging: false,
+        imageTimeout: 5000,
+        onclone: (clonedDoc) => {
+          // Dans le clone html2canvas, re-injecter les base64
+          const clonedLogo = clonedDoc.querySelector('.logo-right') as HTMLImageElement | null;
+          const clonedPhoto = clonedDoc.querySelector('.member-photo') as HTMLImageElement | null;
+          if (clonedLogo) clonedLogo.src = logoB64;
+          if (clonedPhoto && photo) clonedPhoto.src = photo;
+        },
       });
 
-      // Deuxième passage : export final haute résolution
-      const dataUrl = await toPng(tempCard, {
-        pixelRatio: 3,
-        width: 1560,
-        height: 940,
-        skipFonts: true,
-      });
-
+      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = 'carte-aem.png';
       link.href = dataUrl;
       link.click();
+
     } catch (err) {
       console.error('Erreur export:', err);
       alert('Erreur lors de la génération. Réessayez.');
     }
 
-    // ── 5. Nettoyage ──
-    document.body.removeChild(tempWrapper);
+    // ── 4. Restaurer l'état original ──
+    wrapper.style.cssText = prevWrapperStyle;
+    if (logoOriginal) logoOriginal.src = prevLogoSrc;
+    if (photoOriginal) photoOriginal.src = prevPhotoSrc;
 
     setName('');
     setNumber('');
@@ -410,7 +393,7 @@ export default function Home() {
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
-
+  
   return (
     <div className="app-container" dir={t.dir}>
       <Header lang={lang} onSwitchLang={switchLang} />
