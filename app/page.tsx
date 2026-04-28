@@ -6,7 +6,6 @@ import './page.css';
 import { supabase } from './supabaseClient';
 import Header from './Header';
 import Footer from './Footer';
-import { toPng } from 'html-to-image';
 
 type Lang = 'fr' | 'ar';
 
@@ -308,156 +307,85 @@ export default function Home() {
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // ── Wrapper hors écran ──
-    const tempWrapper = document.createElement('div');
-    tempWrapper.style.cssText = `
-    position: fixed;
-    top: -99999px;
-    left: -99999px;
-    width: 1560px;
-    height: 940px;
-    pointer-events: none;
-    z-index: 9999;
-    background: #dde1e8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `;
-    document.body.appendChild(tempWrapper);
+    // ── Injecter photo + logo directement dans le vrai DOM ──
+    const cardExport = document.getElementById('card-export');
+    if (!cardExport) return;
 
-    const original = document.getElementById('card-export');
-    if (!original) { document.body.removeChild(tempWrapper); return; }
+    const photoEl = cardExport.querySelector('.member-photo') as HTMLImageElement | null;
+    const logoEl = cardExport.querySelector('.logo-right') as HTMLImageElement | null;
 
-    // ── Injecter les images dans l'original AVANT de cloner ──
-    const photoElOrig = original.querySelector('.member-photo') as HTMLImageElement | null;
-    const logoElOrig = original.querySelector('.logo-right') as HTMLImageElement | null;
-    const savedPhotoSrc = photoElOrig?.src ?? null;
-    const savedLogoSrc = logoElOrig?.src ?? null;
+    if (photoEl && photo) photoEl.src = photo;
+    if (logoEl) logoEl.src = logoB64;
 
-    if (photoElOrig && photo) photoElOrig.src = photo;
-    if (logoElOrig) logoElOrig.src = logoB64;
-
+    // Attendre fonts + images
     await document.fonts.ready;
     await Promise.all(
-      Array.from(original.querySelectorAll('img')).map(img =>
+      Array.from(cardExport.querySelectorAll('img')).map(img =>
         img.complete ? Promise.resolve() :
           new Promise<void>(r => { img.onload = img.onerror = () => r(); })
       )
     );
 
-    const clone = original.cloneNode(true) as HTMLElement;
+    // ── Forcer les styles desktop directement sur le vrai élément ──
+    // (pas de clone — on travaille sur le DOM réel qui est déjà rendu correctement)
+    const cardInner = cardExport.querySelector('.card-inner') as HTMLElement | null;
+    const savedInnerStyle = cardInner?.getAttribute('style') ?? '';
+    const savedCardStyle = cardExport.getAttribute('style') ?? '';
 
-    // Restaurer l'original
-    if (photoElOrig && savedPhotoSrc) photoElOrig.src = savedPhotoSrc;
-    if (logoElOrig && savedLogoSrc) logoElOrig.src = savedLogoSrc;
-
-    tempWrapper.appendChild(clone);
-
-    // ── ✅ CORRECTION PRINCIPALE : les vraies classes sont .left et .right ──
-    // Forcer le card-inner (card-export contient card-inner)
-    const cardInner = clone.querySelector('.card-inner') as HTMLElement | null;
     if (cardInner) {
-      cardInner.style.cssText = `
-      width: 1400px !important;
-      height: 840px !important;
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: stretch !important;
+      cardInner.setAttribute('style', `
+      width: 1300px !important;
+      height: 750px !important;
+      display: grid !important;
+      grid-template-columns: 34% 66% !important;
       position: relative !important;
-      transform: none !important;
-      top: auto !important;
-      left: auto !important;
-      margin: 0 !important;
-      border-radius: 20px !important;
+      border-radius: 28px !important;
       overflow: hidden !important;
-    `;
-    }
-
-    // ✅ Vraie classe : .left (pas .left-panel)
-    const leftEl = clone.querySelector('.left') as HTMLElement | null;
-    if (leftEl) {
-      leftEl.style.cssText = `
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: flex-start !important;
-      width: 420px !important;
-      min-width: 420px !important;
-      max-width: 420px !important;
-      height: 840px !important;
-      position: relative !important;
-      top: auto !important;
-      left: auto !important;
+      box-shadow: 0 40px 120px rgba(0,0,0,0.22) !important;
       transform: none !important;
-      flex-shrink: 0 !important;
-    `;
+    `);
     }
 
-    // ✅ Vraie classe : .right (pas .right-panel)
-    const rightEl = clone.querySelector('.right') as HTMLElement | null;
-    if (rightEl) {
-      rightEl.style.cssText = `
-      display: flex !important;
-      flex-direction: column !important;
-      flex: 1 !important;
-      height: 840px !important;
-      position: relative !important;
-      top: auto !important;
-      left: auto !important;
-      transform: none !important;
-      overflow: hidden !important;
-    `;
-    }
-
-    // ✅ Forcer aussi le wave-footer
-    const waveFooter = clone.querySelector('.wave-footer') as HTMLElement | null;
-    if (waveFooter) {
-      waveFooter.style.cssText = `
-      position: absolute !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      z-index: 10 !important;
-    `;
-    }
-
-    // ✅ Forcer le wrapper #card-export lui-même
-    clone.style.cssText = `
-    width: 1400px !important;
-    height: 840px !important;
-    position: relative !important;
-    overflow: hidden !important;
-  `;
-
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    // Délai pour que le layout se recalcule
+    await new Promise(resolve => setTimeout(resolve, 600));
 
     try {
-      // Chauffe
-      await toPng(tempWrapper, {
-        pixelRatio: 1,
+      const canvas = await html2canvas(cardExport, {
         width: 1560,
         height: 940,
-        skipFonts: true,
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#dde1e8',
+        logging: false,
+        windowWidth: 1560,
+        windowHeight: 940,
+        scrollX: 0,
+        scrollY: 0,
+        x: 0,
+        y: 0,
+        ignoreElements: (el) => {
+          // Ignorer tout sauf la carte
+          return el.id === 'card-export-wrapper' ? false :
+            el === cardExport ? false :
+              !cardExport.contains(el) && el !== cardExport;
+        },
       });
 
-      // Export final
-      const dataUrl = await toPng(tempWrapper, {
-        pixelRatio: 3,
-        width: 1560,
-        height: 940,
-        skipFonts: true,
-      });
-
+      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = 'carte-aem.png';
       link.href = dataUrl;
       link.click();
+
     } catch (err) {
       console.error('Erreur export:', err);
       alert('Erreur lors de la génération. Réessayez.');
     }
 
-    document.body.removeChild(tempWrapper);
+    // Restaurer les styles originaux
+    if (cardInner) cardInner.setAttribute('style', savedInnerStyle);
+    cardExport.setAttribute('style', savedCardStyle);
 
     setName('');
     setNumber('');
