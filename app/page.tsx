@@ -294,7 +294,7 @@ export default function Home() {
       return;
     }
 
-    // ── Helper fetch → base64 (fonctionne sur iOS/Android) ──
+    // ── Helper : URL → base64 via fetch ──
     const urlToBase64 = async (url: string): Promise<string> => {
       try {
         const r = await fetch(url);
@@ -310,62 +310,58 @@ export default function Home() {
       }
     };
 
-    // ── 1. Convertir logo en base64 AVANT tout ──
+    // ── 1. Convertir logo en base64 ──
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // ── 2. Mettre à jour les images dans le composant caché #card-export ──
-    //    (pas dans un clone — directement dans le DOM existant)
+    // ── 2. Récupérer les éléments DOM ──
     const cardExport = document.getElementById('card-export');
-    if (!cardExport) return;
-
-    // Sauvegarder les srcs originaux pour restaurer après
-    const logoOriginal = cardExport.querySelector('.logo-right') as HTMLImageElement | null;
-    const photoOriginal = cardExport.querySelector('.member-photo') as HTMLImageElement | null;
-
-    const prevLogoSrc = logoOriginal?.src ?? '';
-    const prevPhotoSrc = photoOriginal?.src ?? '';
-
-    // Injecter base64 directement dans le DOM caché
-    if (logoOriginal) logoOriginal.src = logoB64;
-    if (photoOriginal && photo) photoOriginal.src = photo;
-
-    // Attendre que les images soient chargées
-    await document.fonts.ready;
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    // ── 3. Rendre visible temporairement pour html2canvas ──
     const wrapper = document.getElementById('card-export-wrapper') as HTMLElement;
-    const prevWrapperStyle = wrapper.style.cssText;
+    if (!cardExport || !wrapper) return;
 
+    const logoEl = cardExport.querySelector('.logo-right') as HTMLImageElement | null;
+    const photoEl = cardExport.querySelector('.member-photo') as HTMLImageElement | null;
+    const prevLogoSrc = logoEl?.src ?? '';
+    const prevPhotoSrc = photoEl?.src ?? '';
+
+    // ── 3. Injecter les base64 dans le DOM caché ──
+    if (logoEl) logoEl.src = logoB64;
+    if (photoEl && photo) photoEl.src = photo;
+
+    // ── 4. Rendre visible à position fixe (0,0) ──
     wrapper.style.cssText = `
     position: fixed;
-    top: -9999px;
-    left: -9999px;
+    top: 0 !important;
+    left: 0 !important;
     width: 1560px;
     height: 940px;
     overflow: visible;
     pointer-events: none;
-    z-index: 9999;
+    z-index: 99999;
+    background: transparent;
   `;
 
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await document.fonts.ready;
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
       const canvas = await html2canvas(cardExport, {
-        width: 1560,
-        height: 940,
         scale: 3,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#dde1e8',
         logging: false,
-        imageTimeout: 5000,
-        onclone: (clonedDoc) => {
-          // Dans le clone html2canvas, re-injecter les base64
-          const clonedLogo = clonedDoc.querySelector('.logo-right') as HTMLImageElement | null;
-          const clonedPhoto = clonedDoc.querySelector('.member-photo') as HTMLImageElement | null;
-          if (clonedLogo) clonedLogo.src = logoB64;
-          if (clonedPhoto && photo) clonedPhoto.src = photo;
+        imageTimeout: 8000,
+        scrollX: 0,
+        scrollY: 0,
+        y: cardExport.getBoundingClientRect().top * -1,
+        onclone: (_doc, el) => {
+          const img1 = el.querySelector('.logo-right') as HTMLImageElement | null;
+          const img2 = el.querySelector('.member-photo') as HTMLImageElement | null;
+          if (img1) img1.src = logoB64;
+          if (img2 && photo) img2.src = photo;
+          el.style.position = 'absolute';
+          el.style.top = '0';
+          el.style.left = '0';
         },
       });
 
@@ -380,10 +376,19 @@ export default function Home() {
       alert('Erreur lors de la génération. Réessayez.');
     }
 
-    // ── 4. Restaurer l'état original ──
-    wrapper.style.cssText = prevWrapperStyle;
-    if (logoOriginal) logoOriginal.src = prevLogoSrc;
-    if (photoOriginal) photoOriginal.src = prevPhotoSrc;
+    // ── 5. Restaurer le DOM ──
+    wrapper.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+  `;
+    if (logoEl) logoEl.src = prevLogoSrc;
+    if (photoEl) photoEl.src = prevPhotoSrc;
 
     setName('');
     setNumber('');
