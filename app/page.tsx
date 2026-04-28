@@ -283,76 +283,81 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-const exportCard = async () => {
-  const { error } = await supabase
-    .from('etudiants')
-    .insert([{ nom: name, numero: number, ville: city }])
-    .select();
+  const exportCard = async () => {
+    const { error } = await supabase
+      .from('etudiants')
+      .insert([{ nom: name, numero: number, ville: city }])
+      .select();
 
-  if (error) {
-    console.error('Erreur Supabase:', error);
-    alert(t.error);
-    return;
-  }
+    if (error) {
+      console.error('Erreur Supabase:', error);
+      alert(t.error);
+      return;
+    }
 
-  const urlToBase64 = (url: string): Promise<string> =>
-    fetch(url)
-      .then(r => r.blob())
-      .then(blob => new Promise<string>((res, rej) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result as string);
-        reader.onerror = rej;
-        reader.readAsDataURL(blob);
-      }))
-      .catch(() => url);
+    const urlToBase64 = (url: string): Promise<string> =>
+      fetch(url)
+        .then(r => r.blob())
+        .then(blob => new Promise<string>((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result as string);
+          reader.onerror = rej;
+          reader.readAsDataURL(blob);
+        }))
+        .catch(() => url);
 
-  const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
+    const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-  // ── ✅ NOUVELLE APPROCHE : iframe isolé qui ignore les media queries ──
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = `
+    // ── Wrapper hors écran ──
+    const tempWrapper = document.createElement('div');
+    tempWrapper.style.cssText = `
     position: fixed;
     top: -99999px;
     left: -99999px;
     width: 1560px;
     height: 940px;
-    border: none;
     pointer-events: none;
     z-index: 9999;
+    background: #dde1e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   `;
-  document.body.appendChild(iframe);
+    document.body.appendChild(tempWrapper);
 
-  const iframeDoc = iframe.contentDocument!;
+    const original = document.getElementById('card-export');
+    if (!original) { document.body.removeChild(tempWrapper); return; }
 
-  // Copier TOUTES les stylesheets de la page principale dans l'iframe
-  const styleSheets = Array.from(document.styleSheets);
-  let allStyles = '';
-  for (const sheet of styleSheets) {
-    try {
-      const rules = Array.from(sheet.cssRules || []);
-      for (const rule of rules) {
-        // ✅ EXCLURE toutes les media queries (c'est elles qui cassent le layout)
-        if (rule instanceof CSSMediaRule) continue;
-        allStyles += rule.cssText + '\n';
-      }
-    } catch {
-      // Cross-origin stylesheet, on tente via link
-      if (sheet.href) {
-        try {
-          const res = await fetch(sheet.href);
-          const text = await res.text();
-          // Supprimer les @media blocks
-          const noMedia = text.replace(/@media[^{]+\{[\s\S]*?\}\s*\}/g, '');
-          allStyles += noMedia + '\n';
-        } catch {}
-      }
-    }
-  }
+    // ── Injecter les images dans l'original AVANT de cloner ──
+    const photoElOrig = original.querySelector('.member-photo') as HTMLImageElement | null;
+    const logoElOrig = original.querySelector('.logo-right') as HTMLImageElement | null;
+    const savedPhotoSrc = photoElOrig?.src ?? null;
+    const savedLogoSrc = logoElOrig?.src ?? null;
 
-  // Styles forcés desktop (override total, aucune media query possible)
-  const forcedStyles = `
-    * { box-sizing: border-box !important; }
-    #card-export {
+    if (photoElOrig && photo) photoElOrig.src = photo;
+    if (logoElOrig) logoElOrig.src = logoB64;
+
+    await document.fonts.ready;
+    await Promise.all(
+      Array.from(original.querySelectorAll('img')).map(img =>
+        img.complete ? Promise.resolve() :
+          new Promise<void>(r => { img.onload = img.onerror = () => r(); })
+      )
+    );
+
+    const clone = original.cloneNode(true) as HTMLElement;
+
+    // Restaurer l'original
+    if (photoElOrig && savedPhotoSrc) photoElOrig.src = savedPhotoSrc;
+    if (logoElOrig && savedLogoSrc) logoElOrig.src = savedLogoSrc;
+
+    tempWrapper.appendChild(clone);
+
+    // ── ✅ CORRECTION PRINCIPALE : les vraies classes sont .left et .right ──
+    // Forcer le card-inner (card-export contient card-inner)
+    const cardInner = clone.querySelector('.card-inner') as HTMLElement | null;
+    if (cardInner) {
+      cardInner.style.cssText = `
       width: 1400px !important;
       height: 840px !important;
       display: flex !important;
@@ -360,116 +365,108 @@ const exportCard = async () => {
       align-items: stretch !important;
       position: relative !important;
       transform: none !important;
+      top: auto !important;
+      left: auto !important;
       margin: 0 !important;
+      border-radius: 20px !important;
+      overflow: hidden !important;
+    `;
     }
-    #card-export .left-panel {
+
+    // ✅ Vraie classe : .left (pas .left-panel)
+    const leftEl = clone.querySelector('.left') as HTMLElement | null;
+    if (leftEl) {
+      leftEl.style.cssText = `
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: flex-start !important;
       width: 420px !important;
       min-width: 420px !important;
+      max-width: 420px !important;
       height: 840px !important;
       position: relative !important;
+      top: auto !important;
+      left: auto !important;
       transform: none !important;
+      flex-shrink: 0 !important;
+    `;
     }
-    #card-export .right-panel {
+
+    // ✅ Vraie classe : .right (pas .right-panel)
+    const rightEl = clone.querySelector('.right') as HTMLElement | null;
+    if (rightEl) {
+      rightEl.style.cssText = `
       display: flex !important;
       flex-direction: column !important;
       flex: 1 !important;
       height: 840px !important;
       position: relative !important;
+      top: auto !important;
+      left: auto !important;
       transform: none !important;
       overflow: hidden !important;
+    `;
     }
+
+    // ✅ Forcer aussi le wave-footer
+    const waveFooter = clone.querySelector('.wave-footer') as HTMLElement | null;
+    if (waveFooter) {
+      waveFooter.style.cssText = `
+      position: absolute !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      z-index: 10 !important;
+    `;
+    }
+
+    // ✅ Forcer le wrapper #card-export lui-même
+    clone.style.cssText = `
+    width: 1400px !important;
+    height: 840px !important;
+    position: relative !important;
+    overflow: hidden !important;
   `;
 
-  const original = document.getElementById('card-export');
-  if (!original) { document.body.removeChild(iframe); return; }
+    await new Promise(resolve => setTimeout(resolve, 1200));
 
-  // Injecter photo + logo dans l'original avant de cloner
-  const photoElOrig = original.querySelector('.member-photo') as HTMLImageElement | null;
-  const logoElOrig  = original.querySelector('.logo-right')  as HTMLImageElement | null;
-  const savedPhotoSrc = photoElOrig?.src ?? null;
-  const savedLogoSrc  = logoElOrig?.src  ?? null;
+    try {
+      // Chauffe
+      await toPng(tempWrapper, {
+        pixelRatio: 1,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
+      });
 
-  if (photoElOrig && photo) photoElOrig.src = photo;
-  if (logoElOrig) logoElOrig.src = logoB64;
+      // Export final
+      const dataUrl = await toPng(tempWrapper, {
+        pixelRatio: 3,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
+      });
 
-  // Attendre que les images soient prêtes dans l'original
-  await document.fonts.ready;
-  await Promise.all(
-    Array.from(original.querySelectorAll('img')).map(img =>
-      img.complete ? Promise.resolve() :
-      new Promise<void>(r => { img.onload = img.onerror = () => r(); })
-    )
-  );
+      const link = document.createElement('a');
+      link.download = 'carte-aem.png';
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Erreur export:', err);
+      alert('Erreur lors de la génération. Réessayez.');
+    }
 
-  const clone = original.cloneNode(true) as HTMLElement;
+    document.body.removeChild(tempWrapper);
 
-  // Restaurer l'original
-  if (photoElOrig && savedPhotoSrc) photoElOrig.src = savedPhotoSrc;
-  if (logoElOrig  && savedLogoSrc)  logoElOrig.src  = savedLogoSrc;
-
-  // Construire le document iframe
-  iframeDoc.open();
-  iframeDoc.write(`<!DOCTYPE html><html><head>
-    <style>${allStyles}</style>
-    <style>${forcedStyles}</style>
-  </head><body style="margin:0;padding:0;background:#dde1e8;display:flex;align-items:center;justify-content:center;width:1560px;height:940px;">
-  </body></html>`);
-  iframeDoc.close();
-
-  iframeDoc.body.appendChild(clone);
-
-  // Attendre que les fonts et images soient prêtes dans l'iframe
-  await iframeDoc.fonts.ready;
-  await Promise.all(
-    Array.from(iframeDoc.querySelectorAll('img')).map(img =>
-      img.complete ? Promise.resolve() :
-      new Promise<void>(r => { img.onload = img.onerror = () => r(); })
-    )
-  );
-
-  // Délai layout
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
-  try {
-    // Chauffe
-    await toPng(iframeDoc.body, {
-      pixelRatio: 1,
-      width: 1560,
-      height: 940,
-      skipFonts: true,
-    });
-
-    // Export final
-    const dataUrl = await toPng(iframeDoc.body, {
-      pixelRatio: 3,
-      width: 1560,
-      height: 940,
-      skipFonts: true,
-    });
-
-    const link = document.createElement('a');
-    link.download = 'carte-aem.png';
-    link.href = dataUrl;
-    link.click();
-  } catch (err) {
-    console.error('Erreur export:', err);
-    alert('Erreur lors de la génération. Réessayez.');
-  }
-
-  document.body.removeChild(iframe);
-
-  setName('');
-  setNumber('');
-  setCity(cities[lang][0]);
-  setPhoto(null);
-  if (fileInputRef.current) fileInputRef.current.value = '';
-  setSuccess(true);
-  setTimeout(() => setSuccess(false), 3000);
-};
+    setName('');
+    setNumber('');
+    setCity(cities[lang][0]);
+    setPhoto(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
 
   return (
     <div className="app-container" dir={t.dir}>
