@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import './page.css';
 import { supabase } from './supabaseClient';
 import Header from './Header';
@@ -296,59 +296,36 @@ export default function Home() {
       return;
     }
 
-    try {
-      // ✅ Convertir logo et photo en base64 avant capture
-      const images = wrapper.querySelectorAll('img');
-      await Promise.all(
-        Array.from(images).map((img) =>
-          new Promise<void>((resolve) => {
-            if (img.complete && img.src.startsWith('data:')) {
-              resolve();
-              return;
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth || img.width;
-            canvas.height = img.naturalHeight || img.height;
-            const ctx = canvas.getContext('2d');
-            const clone = new Image();
-            clone.crossOrigin = 'anonymous';
-            clone.onload = () => {
-              ctx?.drawImage(clone, 0, 0);
-              img.src = canvas.toDataURL('image/png');
-              resolve();
-            };
-            clone.onerror = () => resolve();
-            clone.src = img.src.startsWith('data:')
-              ? img.src
-              : img.src + '?t=' + Date.now();
-          })
-        )
-      );
+    await document.fonts.ready;
 
-      const canvas = await html2canvas(wrapper, {
-        scale: 4, // ✅ HD — 4x au lieu de 2x
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#dde1e8',
+    try {
+      const dataUrl = await toPng(wrapper, {
+        pixelRatio: 2, // ✅ réduit de 3 → 2 pour être plus rapide
         width: 1560,
         height: 940,
-        logging: false,
-        imageTimeout: 0,      // ✅ pas de timeout sur les images
-        removeContainer: true, // ✅ nettoie après capture
+        skipFonts: true,
+        cacheBust: true, // ✅ force le rechargement des images
       });
 
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], 'carte-aem.png', { type: 'image/png' });
 
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-      if (isIOS && navigator.canShare?.({ files: [file] })) {
-        // ✅ iPhone → Galerie Photos
-        await navigator.share({ files: [file], title: 'Carte AEM' });
+      if (isIOS) {
+        // ✅ iPhone : Web Share API → "Enregistrer l'image" dans Galerie
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Carte AEM',
+          });
+        } else {
+          // fallback iOS si share non supporté
+          window.open(dataUrl, '_blank');
+        }
       } else {
-        // ✅ Android + Desktop
+        // ✅ Android + Desktop : téléchargement direct
         const link = document.createElement('a');
         link.download = 'carte-aem.png';
         link.href = dataUrl;
