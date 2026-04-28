@@ -294,46 +294,27 @@ export default function Home() {
       return;
     }
 
-    // ── 1. Pré-convertir toutes les images en base64 AVANT tout DOM ──
-    const toBase64 = (url: string): Promise<string> =>
-      new Promise((resolve) => {
-        const img = new window.Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          canvas.getContext('2d')!.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = () => {
-          // Fallback : fetch + blob (contourne CORS sur mobile)
-          fetch(url)
-            .then(r => r.blob())
-            .then(blob => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            })
-            .catch(() => resolve(url));
-        };
-        img.src = url + '?t=' + Date.now(); // cache-bust
-      });
+    // ── Helper : URL → base64 via fetch (contourne CORS sur iOS/Android) ──
+    const urlToBase64 = (url: string): Promise<string> =>
+      fetch(url)
+        .then(r => r.blob())
+        .then(blob => new Promise<string>((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result as string);
+          reader.onerror = rej;
+          reader.readAsDataURL(blob);
+        }))
+        .catch(() => url); // fallback : URL originale
 
-    const logoUrl = window.location.origin + '/logo-aem.png';
+    // ── 1. Pré-charger logo en base64 (photo est déjà base64 depuis FileReader) ──
+    const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // Convertir en parallèle
-    const [photoB64, logoB64] = await Promise.all([
-      photo ? toBase64(photo) : Promise.resolve(null),
-      toBase64(logoUrl),
-    ]);
-
-    // ── 2. Construire le wrapper temporaire ──
+    // ── 2. Créer le wrapper temporaire hors écran ──
     const tempWrapper = document.createElement('div');
     tempWrapper.style.cssText = `
     position: fixed;
-    top: -9999px;
-    left: -9999px;
+    top: -99999px;
+    left: -99999px;
     width: 1560px;
     height: 940px;
     pointer-events: none;
@@ -353,50 +334,55 @@ export default function Home() {
     tempWrapper.appendChild(tempCard);
 
     const original = document.getElementById('card-export');
-    if (!original) return;
-    const clone = original.cloneNode(true) as HTMLElement;
+    if (!original) { document.body.removeChild(tempWrapper); return; }
 
-    // ── 3. Injecter les base64 directement dans le clone ──
-    if (photoB64) {
+    const clone = original.cloneNode(true) as HTMLElement;
+    tempCard.appendChild(clone);
+
+    // ── 3. Injecter les images base64 directement dans le clone ──
+
+    // Photo de profil (déjà en base64 dans le state `photo`)
+    if (photo) {
       const photoEl = clone.querySelector('.member-photo') as HTMLImageElement | null;
       if (photoEl) {
-        photoEl.src = photoB64;
-        photoEl.crossOrigin = '';
+        photoEl.src = photo; // base64 direct, pas besoin de conversion
       }
     }
 
+    // Logo AEM (converti en base64 via fetch)
     const logoEl = clone.querySelector('.logo-right') as HTMLImageElement | null;
     if (logoEl) {
       logoEl.src = logoB64;
-      logoEl.crossOrigin = '';
     }
 
-    tempCard.appendChild(clone);
-
-    // ── 4. Attendre fonts + rendu images ──
+    // ── 4. Attendre que toutes les <img> du clone soient chargées ──
     await document.fonts.ready;
 
-    // Attendre que les <img> du clone soient complètes
-    const cloneImgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[];
+    const allImgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[];
     await Promise.all(
-      cloneImgs.map(img =>
+      allImgs.map(img =>
         img.complete
           ? Promise.resolve()
-          : new Promise<void>(res => {
-            img.onload = () => res();
-            img.onerror = () => res();
+          : new Promise<void>(resolve => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve(); // ne pas bloquer si erreur
           })
       )
     );
 
-    // Délai extra pour mobile (rendu CSS)
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Délai rendu CSS (important sur mobile)
+    await new Promise(resolve => setTimeout(resolve, 600));
 
     try {
-      // Premier passage (chauffe le cache de html-to-image)
-      await toPng(tempCard, { pixelRatio: 1, width: 1560, height: 940, skipFonts: true });
+      // Premier passage : chauffe le cache interne de html-to-image
+      await toPng(tempCard, {
+        pixelRatio: 1,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
+      });
 
-      // Deuxième passage haute résolution
+      // Deuxième passage : export final haute résolution
       const dataUrl = await toPng(tempCard, {
         pixelRatio: 3,
         width: 1560,
@@ -410,9 +396,10 @@ export default function Home() {
       link.click();
     } catch (err) {
       console.error('Erreur export:', err);
-      alert('Erreur lors de la génération de la carte. Réessayez.');
+      alert('Erreur lors de la génération. Réessayez.');
     }
 
+    // ── 5. Nettoyage ──
     document.body.removeChild(tempWrapper);
 
     setName('');
