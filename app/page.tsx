@@ -312,10 +312,19 @@ export default function Home() {
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // 3. Attendre polices
+    // 3. ⚡ PRÉCHARGER les polices en base64 dans un <style> injecté
+    const fontUrls = [
+      'https://fonts.gstatic.com/s/plusjakartasans/v8/LDIoaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KU7NSg.woff2',
+    ];
+
+    const fontBase64s = await Promise.all(fontUrls.map(u => urlToBase64(u).catch(() => '')));
+
+    // 4. Attendre que TOUTES les polices du document soient prêtes
     await document.fonts.ready;
+    // Forcer un reflow
     document.body.offsetHeight;
-    await new Promise(resolve => setTimeout(resolve, 400));
+    // Délai pour s'assurer que le rendu est stable
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
       const canvas = await html2canvas(original, {
@@ -327,98 +336,66 @@ export default function Home() {
         scrollY: 0,
         windowWidth: 1560,
         windowHeight: 940,
+        // ⚡ Clé : ignorer les fonts extérieures et utiliser celles déjà chargées
         onclone: async (clonedDoc) => {
           const clonedCard = clonedDoc.getElementById('card-export');
           if (!clonedCard) return;
 
-          // ── 1. Injecter CSS de base ───────────────────────────────
+          // Injecter un style qui force la police en fallback sûr si pas chargée
           const styleEl = clonedDoc.createElement('style');
           styleEl.textContent = `
-          * { font-family: 'Plus Jakarta Sans', Arial, sans-serif !important; }
-          .card-inner * { line-height: normal !important; vertical-align: baseline !important; }
-          .card-inner .field        { line-height: 1.2 !important; }
-          .card-inner .box          { line-height: 1.65 !important; }
-          .card-inner .perks li     { line-height: 1.4 !important; }
-          .card-inner .dates        { line-height: 1.8 !important; }
+          * {
+            font-family: 'Plus Jakarta Sans', Arial, sans-serif !important;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
+          }
+          /* Fixer le line-height partout pour éviter le décalage */
+          .card-inner * {
+            line-height: normal;
+          }
+          .card-inner .field { line-height: 1.2; }
+          .card-inner .box { line-height: 1.65; }
+          .card-inner .perks li { line-height: 1.4; }
+          .card-inner .dates { line-height: 2.2; }
+          /* Stabiliser flexbox */
+          .card-inner .left,
+          .card-inner .right {
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .card-inner .contact-row {
+            display: flex !important;
+            align-items: center !important;
+          }
         `;
           clonedDoc.head.appendChild(styleEl);
 
-          // ── 2. Manipuler directement le DOM (plus fiable que CSS) ─
-          const rightPanel = clonedCard.querySelector('.right') as HTMLElement | null;
-          if (rightPanel) {
-            rightPanel.style.cssText += `
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: flex-start !important;
-            align-items: flex-start !important;
-            padding: 36px 48px 80px 48px !important;
-            gap: 16px !important;
-            box-sizing: border-box !important;
-          `;
-          }
-
-          const leftPanel = clonedCard.querySelector('.left') as HTMLElement | null;
-          if (leftPanel) {
-            leftPanel.style.cssText += `
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: flex-start !important;
-            align-items: flex-start !important;
-            padding: 40px 40px 40px 40px !important;
-            gap: 12px !important;
-            box-sizing: border-box !important;
-          `;
-          }
-
-          // Supprimer margin-top: auto des dates (le vrai coupable)
-          const datesEl = clonedCard.querySelector('.dates') as HTMLElement | null;
-          if (datesEl) {
-            datesEl.style.marginTop = '0px';
-            datesEl.style.paddingTop = '4px';
-          }
-
-          // Fixer les perks
-          const perksList = clonedCard.querySelector('.perks') as HTMLElement | null;
-          if (perksList) {
-            perksList.style.gap = '10px';
-            perksList.style.display = 'flex';
-            perksList.style.flexDirection = 'column';
-          }
-
-          // Fixer photo-wrap
-          const photoWrap = clonedCard.querySelector('.photo-wrap') as HTMLElement | null;
-          if (photoWrap) {
-            photoWrap.style.marginBottom = '4px';
-          }
-
-          // ── 3. Logo ───────────────────────────────────────────────
+          // Logo
           const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
           if (logoEl) {
             logoEl.src = logoB64;
             logoEl.crossOrigin = 'anonymous';
           }
 
-          // ── 4. Photo membre ───────────────────────────────────────
+          // Photo membre
           if (photo) {
             const photoEl = clonedCard.querySelector('.member-photo') as HTMLImageElement | null;
             if (photoEl) photoEl.src = photo;
           }
 
-          // ── 5. Attendre images ────────────────────────────────────
+          // Attendre images dans le clone
           await Promise.all(
             Array.from(clonedCard.querySelectorAll('img')).map(img =>
-              img.complete
-                ? Promise.resolve()
-                : new Promise<void>(resolve => {
+              img.complete ? Promise.resolve() :
+                new Promise<void>(resolve => {
                   img.onload = () => resolve();
                   img.onerror = () => resolve();
                 })
             )
           );
 
-          // ── 6. Forcer reflow dans le clone ────────────────────────
-          clonedCard.getBoundingClientRect();
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // ⚡ Délai supplémentaire pour le rendu dans le clone
+          await new Promise(resolve => setTimeout(resolve, 200));
         },
       });
 
@@ -434,7 +411,6 @@ export default function Home() {
       return;
     }
 
-    // Reset
     setName('');
     setNumber('');
     setCity(cities[lang][0]);
