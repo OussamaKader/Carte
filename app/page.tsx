@@ -312,18 +312,9 @@ export default function Home() {
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // 3. ⚡ PRÉCHARGER les polices en base64 dans un <style> injecté
-    const fontUrls = [
-      'https://fonts.gstatic.com/s/plusjakartasans/v8/LDIoaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KU7NSg.woff2',
-    ];
-
-    const fontBase64s = await Promise.all(fontUrls.map(u => urlToBase64(u).catch(() => '')));
-
-    // 4. Attendre que TOUTES les polices du document soient prêtes
+    // 3. Attendre que TOUTES les polices du document soient prêtes
     await document.fonts.ready;
-    // Forcer un reflow
-    document.body.offsetHeight;
-    // Délai pour s'assurer que le rendu est stable
+    document.body.offsetHeight; // forcer un reflow
     await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
@@ -336,12 +327,11 @@ export default function Home() {
         scrollY: 0,
         windowWidth: 1560,
         windowHeight: 940,
-        // ⚡ Clé : ignorer les fonts extérieures et utiliser celles déjà chargées
         onclone: async (clonedDoc) => {
           const clonedCard = clonedDoc.getElementById('card-export');
           if (!clonedCard) return;
 
-          // Injecter un style qui force la police en fallback sûr si pas chargée
+          // ── Correctifs texte décalé ──────────────────────────────
           const styleEl = clonedDoc.createElement('style');
           styleEl.textContent = `
           * {
@@ -349,53 +339,80 @@ export default function Home() {
             -webkit-font-smoothing: antialiased;
             text-rendering: geometricPrecision;
           }
-          /* Fixer le line-height partout pour éviter le décalage */
           .card-inner * {
             line-height: normal;
           }
-          .card-inner .field { line-height: 1.2; }
-          .card-inner .box { line-height: 1.65; }
-          .card-inner .perks li { line-height: 1.4; }
-          .card-inner .dates { line-height: 2.2; }
-          /* Stabiliser flexbox */
-          .card-inner .left,
+          .card-inner .field        { line-height: 1.2; }
+          .card-inner .box          { line-height: 1.65; }
+          .card-inner .perks li     { line-height: 1.4; }
+          .card-inner .dates        { line-height: 2.2; margin-top: 0 !important; }
+
+          /* Panneau gauche */
+          .card-inner .left {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            padding-top: 36px !important;
+          }
+
+          /* Panneau droit — clé principale du fix */
           .card-inner .right {
             display: flex !important;
             flex-direction: column !important;
+            justify-content: flex-start !important;
+            padding-top: 32px !important;
+            padding-bottom: 60px !important;
+            gap: 0 !important;
           }
+          .card-inner .right > * + * {
+            margin-top: 13px !important;
+          }
+
+          /* Contact rows */
           .card-inner .contact-row {
             display: flex !important;
             align-items: center !important;
           }
+
+          /* Perks */
+          .card-inner .perks {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important;
+          }
+          .card-inner .perks li + li {
+            margin-top: 10px !important;
+          }
         `;
           clonedDoc.head.appendChild(styleEl);
 
-          // Logo
+          // ── Logo ─────────────────────────────────────────────────
           const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
           if (logoEl) {
             logoEl.src = logoB64;
             logoEl.crossOrigin = 'anonymous';
           }
 
-          // Photo membre
+          // ── Photo membre ─────────────────────────────────────────
           if (photo) {
             const photoEl = clonedCard.querySelector('.member-photo') as HTMLImageElement | null;
             if (photoEl) photoEl.src = photo;
           }
 
-          // Attendre images dans le clone
+          // ── Attendre que toutes les images soient chargées ───────
           await Promise.all(
             Array.from(clonedCard.querySelectorAll('img')).map(img =>
-              img.complete ? Promise.resolve() :
-                new Promise<void>(resolve => {
+              img.complete
+                ? Promise.resolve()
+                : new Promise<void>(resolve => {
                   img.onload = () => resolve();
                   img.onerror = () => resolve();
                 })
             )
           );
 
-          // ⚡ Délai supplémentaire pour le rendu dans le clone
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // ── Délai final pour stabiliser le rendu ─────────────────
+          await new Promise(resolve => setTimeout(resolve, 250));
         },
       });
 
@@ -411,6 +428,7 @@ export default function Home() {
       return;
     }
 
+    // Reset du formulaire
     setName('');
     setNumber('');
     setCity(cities[lang][0]);

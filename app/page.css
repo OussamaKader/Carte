@@ -1139,7 +1139,7 @@ body {
 }
 
 .card-inner .right>*+* {
-  margin-top: 18px;
+   margin-top: 14px;
 }
 
 /* Fixer les heights des éléments flex pour html2canvas */
@@ -1245,7 +1245,7 @@ body {
 }
 
 .right {
-  padding: 40px 48px 80px;
+  padding: 36px 48px 70px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1364,7 +1364,7 @@ body {
   color: #555;
   font-weight: 700;
   line-height: 2.2;
-  margin-top: auto;
+  margin-top: 0 ;
   /* ← colle les dates juste au-dessus de la wave */
 }
 
