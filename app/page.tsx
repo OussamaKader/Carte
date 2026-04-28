@@ -297,6 +297,16 @@ export default function Home() {
       return;
     }
 
+    // ✅ CORRECTION MOBILE : précharger la photo avant l'export
+    if (photo) {
+      await new Promise<void>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+        img.src = photo;
+      });
+    }
+
     await document.fonts.ready;
 
     try {
@@ -305,6 +315,9 @@ export default function Home() {
         width: 1560,
         height: 940,
         skipFonts: true,
+        // ✅ CORRECTION MOBILE : forcer l'inclusion des images cachées
+        cacheBust: true,
+        includeQueryParams: true,
       });
 
       const link = document.createElement('a');
