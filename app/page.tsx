@@ -292,6 +292,7 @@ export default function Home() {
       .select();
 
     if (error) {
+      console.error('Erreur Supabase:', error);
       alert(t.error);
       return;
     }
@@ -300,40 +301,16 @@ export default function Home() {
 
     try {
       const dataUrl = await toPng(wrapper, {
-        pixelRatio: 2, // ✅ réduit de 3 → 2 pour être plus rapide
+        pixelRatio: 3,
         width: 1560,
         height: 940,
         skipFonts: true,
-        cacheBust: true, // ✅ force le rechargement des images
       });
 
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], 'carte-aem.png', { type: 'image/png' });
-
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (isIOS) {
-        // ✅ iPhone : Web Share API → "Enregistrer l'image" dans Galerie
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Carte AEM',
-          });
-        } else {
-          // fallback iOS si share non supporté
-          window.open(dataUrl, '_blank');
-        }
-      } else {
-        // ✅ Android + Desktop : téléchargement direct
-        const link = document.createElement('a');
-        link.download = 'carte-aem.png';
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-
+      const link = document.createElement('a');
+      link.download = 'carte-aem.png';
+      link.href = dataUrl;
+      link.click();
     } catch (err) {
       console.error('Erreur export:', err);
     }
