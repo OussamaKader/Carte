@@ -312,18 +312,9 @@ export default function Home() {
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // 3. ⚡ PRÉCHARGER les polices en base64 dans un <style> injecté
-    const fontUrls = [
-      'https://fonts.gstatic.com/s/plusjakartasans/v8/LDIoaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KU7NSg.woff2',
-    ];
-
-    const fontBase64s = await Promise.all(fontUrls.map(u => urlToBase64(u).catch(() => '')));
-
-    // 4. Attendre que TOUTES les polices du document soient prêtes
+    // 3. Attendre que TOUTES les polices du document soient prêtes
     await document.fonts.ready;
-    // Forcer un reflow
     document.body.offsetHeight;
-    // Délai pour s'assurer que le rendu est stable
     await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
@@ -336,38 +327,200 @@ export default function Home() {
         scrollY: 0,
         windowWidth: 1560,
         windowHeight: 940,
-        // ⚡ Clé : ignorer les fonts extérieures et utiliser celles déjà chargées
         onclone: async (clonedDoc) => {
           const clonedCard = clonedDoc.getElementById('card-export');
           if (!clonedCard) return;
 
-          // Injecter un style qui force la police en fallback sûr si pas chargée
           const styleEl = clonedDoc.createElement('style');
           styleEl.textContent = `
-          * {
-            font-family: 'Plus Jakarta Sans', Arial, sans-serif !important;
-            -webkit-font-smoothing: antialiased;
-            text-rendering: geometricPrecision;
-          }
-          /* Fixer le line-height partout pour éviter le décalage */
-          .card-inner * {
-            line-height: normal;
-          }
-          .card-inner .field { line-height: 1.2; }
-          .card-inner .box { line-height: 1.65; }
-          .card-inner .perks li { line-height: 1.4; }
-          .card-inner .dates { line-height: 2.2; }
-          /* Stabiliser flexbox */
-          .card-inner .left,
-          .card-inner .right {
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .card-inner .contact-row {
-            display: flex !important;
-            align-items: center !important;
-          }
-        `;
+            * {
+              font-family: 'Plus Jakarta Sans', Arial, sans-serif !important;
+              -webkit-font-smoothing: antialiased;
+              text-rendering: geometricPrecision;
+            }
+
+            .card-inner {
+              display: grid !important;
+              grid-template-columns: 34% 66% !important;
+              width: 1300px !important;
+              height: 750px !important;
+            }
+
+            .card-inner .left {
+              display: flex !important;
+              flex-direction: column !important;
+              padding: 48px 40px 40px !important;
+              background: #1b3a6b !important;
+            }
+
+            .card-inner .left > * + * {
+              margin-top: 14px !important;
+            }
+
+            .card-inner .right {
+              display: flex !important;
+              flex-direction: column !important;
+              padding: 36px 48px 70px !important;
+              background: #fff !important;
+            }
+
+            .card-inner .right > * + * {
+              margin-top: 18px !important;
+            }
+
+            .card-inner .right h1 {
+              font-size: 32px !important;
+              font-weight: 900 !important;
+              line-height: 1.15 !important;
+              color: #1b3a6b !important;
+            }
+
+            .card-inner .badge {
+              font-size: 12px !important;
+              letter-spacing: 2px !important;
+              font-weight: 800 !important;
+              padding: 7px 22px !important;
+              line-height: 1.4 !important;
+            }
+
+            .card-inner .title-row {
+              display: flex !important;
+              align-items: center !important;
+              gap: 20px !important;
+            }
+
+            .card-inner .logo-right {
+              width: 75px !important;
+              height: 75px !important;
+            }
+
+            .card-inner .box {
+              font-size: 15px !important;
+              line-height: 1.65 !important;
+              padding: 18px 20px !important;
+            }
+
+            .card-inner .tag {
+              font-size: 15px !important;
+              line-height: 1.5 !important;
+              padding: 12px 18px !important;
+            }
+
+            .card-inner .perks {
+              display: flex !important;
+              flex-direction: column !important;
+              list-style: none !important;
+            }
+
+            .card-inner .perks li + li {
+              margin-top: 12px !important;
+            }
+
+            .card-inner .perks li {
+              display: flex !important;
+              align-items: center !important;
+              gap: 12px !important;
+              font-size: 15px !important;
+              font-weight: 800 !important;
+              line-height: 1.4 !important;
+              color: #1b3a6b !important;
+            }
+
+            .card-inner .perk-dot {
+              width: 11px !important;
+              height: 11px !important;
+              border-radius: 50% !important;
+              flex-shrink: 0 !important;
+            }
+
+            .card-inner .perk-dot.red  { background: #c8102e !important; }
+            .card-inner .perk-dot.green { background: #006233 !important; }
+            .card-inner .perk-dot.blue  { background: #1b3a6b !important; }
+
+            .card-inner .dates {
+              font-size: 14px !important;
+              font-weight: 700 !important;
+              line-height: 1.8 !important;
+              color: #555 !important;
+            }
+
+            .card-inner .label {
+              font-size: 10px !important;
+              letter-spacing: 2px !important;
+              opacity: 0.7 !important;
+              text-transform: uppercase !important;
+              font-weight: 700 !important;
+              line-height: 1.4 !important;
+            }
+
+            .card-inner .field {
+              font-size: 15px !important;
+              font-weight: 700 !important;
+              line-height: 1.2 !important;
+              padding: 12px 16px !important;
+              background: rgba(255,255,255,0.13) !important;
+              border-radius: 10px !important;
+            }
+
+            .card-inner .contact-row {
+              display: flex !important;
+              align-items: center !important;
+              gap: 8px !important;
+              min-height: 44px !important;
+              font-size: 12px !important;
+              font-weight: 700 !important;
+              line-height: 1.4 !important;
+              background: rgba(255,255,255,0.13) !important;
+              padding: 6px 12px !important;
+              border-radius: 8px !important;
+            }
+
+            .card-inner .contact-icon {
+              width: 32px !important;
+              height: 32px !important;
+              border-radius: 8px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              flex-shrink: 0 !important;
+            }
+
+            .card-inner .contact-icon.fb { background: #1877f2 !important; }
+            .card-inner .contact-icon.wa { background: #25d366 !important; }
+            .card-inner .contact-icon.sg { background: #e67e22 !important; }
+
+            .card-inner .photo-wrap {
+              display: flex !important;
+              justify-content: center !important;
+              margin-bottom: 8px !important;
+            }
+
+            .card-inner .member-photo {
+              width: 140px !important;
+              height: 140px !important;
+              border-radius: 50% !important;
+              object-fit: cover !important;
+              border: 4px solid rgba(255,255,255,0.5) !important;
+            }
+
+            .card-inner .divider {
+              height: 3px !important;
+              border-radius: 1px !important;
+              background: linear-gradient(90deg, #1b3a6b 43%, #c8102e 43%, #c8102e 71%, #006233 71%) !important;
+              margin: 2px 0 !important;
+            }
+
+            .wave-footer {
+              position: absolute !important;
+              bottom: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
+              height: 80px !important;
+              overflow: hidden !important;
+              z-index: 10 !important;
+              grid-column: 1 / -1 !important;
+            }
+          `;
           clonedDoc.head.appendChild(styleEl);
 
           // Logo
@@ -394,7 +547,6 @@ export default function Home() {
             )
           );
 
-          // ⚡ Délai supplémentaire pour le rendu dans le clone
           await new Promise(resolve => setTimeout(resolve, 200));
         },
       });
