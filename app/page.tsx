@@ -294,6 +294,9 @@ export default function Home() {
       return;
     }
 
+    const original = document.getElementById('card-export');
+    if (!original) return;
+
     const urlToBase64 = (url: string): Promise<string> =>
       fetch(url)
         .then(r => r.blob())
@@ -306,69 +309,31 @@ export default function Home() {
         .catch(() => url);
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
-
-    // ── Injecter photo + logo directement dans le vrai DOM ──
-    const cardExport = document.getElementById('card-export');
-    if (!cardExport) return;
-
-    const photoEl = cardExport.querySelector('.member-photo') as HTMLImageElement | null;
-    const logoEl = cardExport.querySelector('.logo-right') as HTMLImageElement | null;
-
-    if (photoEl && photo) photoEl.src = photo;
-    if (logoEl) logoEl.src = logoB64;
-
-    // Attendre fonts + images
     await document.fonts.ready;
-    await Promise.all(
-      Array.from(cardExport.querySelectorAll('img')).map(img =>
-        img.complete ? Promise.resolve() :
-          new Promise<void>(r => { img.onload = img.onerror = () => r(); })
-      )
-    );
-
-    // ── Forcer les styles desktop directement sur le vrai élément ──
-    // (pas de clone — on travaille sur le DOM réel qui est déjà rendu correctement)
-    const cardInner = cardExport.querySelector('.card-inner') as HTMLElement | null;
-    const savedInnerStyle = cardInner?.getAttribute('style') ?? '';
-    const savedCardStyle = cardExport.getAttribute('style') ?? '';
-
-    if (cardInner) {
-      cardInner.setAttribute('style', `
-      width: 1300px !important;
-      height: 750px !important;
-      display: grid !important;
-      grid-template-columns: 34% 66% !important;
-      position: relative !important;
-      border-radius: 28px !important;
-      overflow: hidden !important;
-      box-shadow: 0 40px 120px rgba(0,0,0,0.22) !important;
-      transform: none !important;
-    `);
-    }
-
-    // Délai pour que le layout se recalcule
-    await new Promise(resolve => setTimeout(resolve, 600));
 
     try {
-      const canvas = await html2canvas(cardExport, {
-        width: 1560,
-        height: 940,
+      const canvas = await html2canvas(original, {
         scale: 3,
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         backgroundColor: '#dde1e8',
-        logging: false,
-        windowWidth: 1560,
-        windowHeight: 940,
         scrollX: 0,
         scrollY: 0,
-        x: 0,
-        y: 0,
-        ignoreElements: (el) => {
-          // Ignorer tout sauf la carte
-          return el.id === 'card-export-wrapper' ? false :
-            el === cardExport ? false :
-              !cardExport.contains(el) && el !== cardExport;
+        windowWidth: 1560,
+        windowHeight: 940,
+        onclone: (clonedDoc) => {
+          const clonedCard = clonedDoc.getElementById('card-export');
+          if (!clonedCard) return;
+
+          // Le logo en base64
+          const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
+          if (logoEl) logoEl.src = logoB64;
+
+          // La photo membre en base64
+          if (photo) {
+            const photoEl = clonedCard.querySelector('.member-photo') as HTMLImageElement | null;
+            if (photoEl) photoEl.src = photo;
+          }
         },
       });
 
@@ -381,11 +346,8 @@ export default function Home() {
     } catch (err) {
       console.error('Erreur export:', err);
       alert('Erreur lors de la génération. Réessayez.');
+      return;
     }
-
-    // Restaurer les styles originaux
-    if (cardInner) cardInner.setAttribute('style', savedInnerStyle);
-    cardExport.setAttribute('style', savedCardStyle);
 
     setName('');
     setNumber('');
