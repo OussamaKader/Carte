@@ -321,19 +321,33 @@ export default function Home() {
         scrollY: 0,
         windowWidth: 1560,
         windowHeight: 940,
-        onclone: (clonedDoc) => {
+        onclone: async (clonedDoc) => {
           const clonedCard = clonedDoc.getElementById('card-export');
           if (!clonedCard) return;
 
-          // Le logo en base64
+          // Logo
           const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
-          if (logoEl) logoEl.src = logoB64;
+          if (logoEl) {
+            logoEl.src = logoB64; // déjà chargé avant onclone
+            logoEl.crossOrigin = 'anonymous';
+          }
 
-          // La photo membre en base64
+          // Photo membre
           if (photo) {
             const photoEl = clonedCard.querySelector('.member-photo') as HTMLImageElement | null;
             if (photoEl) photoEl.src = photo;
           }
+
+          // Attendre que les images soient chargées dans le clone
+          await Promise.all(
+            Array.from(clonedCard.querySelectorAll('img')).map(img =>
+              img.complete ? Promise.resolve() :
+                new Promise<void>(resolve => {
+                  img.onload = () => resolve();
+                  img.onerror = () => resolve();
+                })
+            )
+          );
         },
       });
 

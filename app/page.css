@@ -1202,7 +1202,7 @@ body {
 }
 
 .right {
-  padding: 40px 48px 130px;
+  padding: 40px 48px 90px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1213,7 +1213,8 @@ body {
 
 .badge {
   background: #1b3a6b;
-  display: flex;            /* ← MANQUANT */
+  display: flex;
+  /* ← MANQUANT */
   align-items: center;
   justify-content: center;
   color: #fff;
@@ -1238,16 +1239,19 @@ body {
   height: 75px;
   border-radius: 50%;
   object-fit: cover;
-  flex-shrink: 0;         /* le logo ne rétrécit jamais */
+  flex-shrink: 0;
+  /* le logo ne rétrécit jamais */
   border: 3px solid #e8ecf4;
 }
 
 .right h1 {
-  font-size: 32px;        /* était 24px → agrandi */
+  font-size: 32px;
+  /* était 24px → agrandi */
   color: #1b3a6b;
   font-weight: 900;
   line-height: 1.15;
-  flex: 1;               /* prend l'espace restant après le logo */
+  flex: 1;
+  /* prend l'espace restant après le logo */
 }
 
 .divider {
@@ -1317,7 +1321,8 @@ body {
   color: #555;
   font-weight: 700;
   line-height: 2.2;
-  margin-top: auto; /* ← pousse les dates vers le bas */
+  margin-top: auto;
+  /* ← pousse les dates vers le bas */
 }
 
 .wave-footer {
@@ -1341,7 +1346,7 @@ body {
 /* =============================================
    RTL — carte uniquement (inchangé)
    ============================================= */
-  
+
 [dir="rtl"] .right h1 {
   font-size: 32px;
   text-align: right;
@@ -1371,7 +1376,8 @@ body {
   flex-direction: column;
   align-items: flex-end;
   position: relative;
-  padding: 40px 48px 130px; /* ← REMPLACE padding-bottom seul */
+  padding: 40px 48px 90px; /* était 130px */
+  /* ← REMPLACE padding-bottom seul */
 }
 
 [dir="rtl"] .badge {
@@ -1381,7 +1387,8 @@ body {
 
 [dir="rtl"] .title-row {
   display: flex;
-  flex-direction: row;    /* logo à gauche, texte à droite en RTL visuel */
+  flex-direction: row;
+  /* logo à gauche, texte à droite en RTL visuel */
   align-items: center;
   gap: 16px;
   width: 100%;
