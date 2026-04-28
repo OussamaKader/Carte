@@ -281,6 +281,21 @@ export default function Home() {
     reader.onload = () => setPhoto(reader.result as string);
     reader.readAsDataURL(file);
   };
+  const waitForImages = (element: HTMLElement) => {
+    const images = Array.from(element.querySelectorAll("img"));
+
+    return Promise.all(
+      images.map((img) => {
+        if (img.complete) return Promise.resolve();
+
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      })
+    );
+  };
+
 
   const exportCard = async () => {
     const { error } = await supabase
@@ -294,20 +309,20 @@ export default function Home() {
       return;
     }
 
-    // Créer un wrapper temporaire VISIBLE pour la capture
+    // ===== WRAPPER TEMPORAIRE =====
     const tempWrapper = document.createElement('div');
     tempWrapper.style.cssText = `
     position: fixed;
-    top: -9999px;
-    left: -9999px;
-    width: 1560px;
-    height: 940px;
+    top: -10000px;
+    left: -10000px;
+    width: 4000px;
+    height: auto;
     pointer-events: none;
     z-index: 9999;
+    background: transparent;
   `;
     document.body.appendChild(tempWrapper);
 
-    // Créer le contenu de la carte dans ce wrapper
     const tempCard = document.createElement('div');
     tempCard.style.cssText = `
     width: 1560px;
@@ -316,75 +331,104 @@ export default function Home() {
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: scale(1);
   `;
     tempWrapper.appendChild(tempCard);
 
-    // Copier le contenu de card-export dans le wrapper temporaire
     const original = document.getElementById('card-export');
     if (!original) return;
+
     const clone = original.cloneNode(true) as HTMLElement;
 
-    // Injecter la photo en base64 dans le clone
+    // ===== IMAGE CONVERSION SAFE MOBILE =====
     const toBase64 = (url: string): Promise<string> =>
       new Promise((resolve) => {
-        const img = new window.Image();
+        const img = new Image();
         img.crossOrigin = 'anonymous';
+        img.decoding = 'async';
+
         img.onload = () => {
           const canvas = document.createElement('canvas');
           canvas.width = img.naturalWidth;
           canvas.height = img.naturalHeight;
-          canvas.getContext('2d')!.drawImage(img, 0, 0);
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(url);
+
+          ctx.drawImage(img, 0, 0);
           resolve(canvas.toDataURL('image/png'));
         };
+
         img.onerror = () => resolve(url);
         img.src = url;
       });
 
-    // Remplacer la photo membre
+    // ===== PHOTO =====
     if (photo) {
       const photoEl = clone.querySelector('.member-photo') as HTMLImageElement | null;
       if (photoEl) photoEl.src = await toBase64(photo);
     }
 
-    // Remplacer le logo
+    // ===== LOGO =====
     const logoEl = clone.querySelector('.logo-right') as HTMLImageElement | null;
     if (logoEl) {
       logoEl.src = await toBase64(window.location.origin + '/logo-aem.png');
     }
 
     tempCard.appendChild(clone);
+
+    // ===== WAIT FULL RENDER (IMPORTANT MOBILE) =====
     await document.fonts.ready;
 
-    // Attendre que les images soient rendues
-    await new Promise(resolve => setTimeout(resolve, 300));
+    const images = Array.from(tempCard.querySelectorAll('img'));
+    await Promise.all(
+      images.map(
+        (img) =>
+          new Promise((res) => {
+            if (img.complete) return res(true);
+            img.onload = () => res(true);
+            img.onerror = () => res(true);
+          })
+      )
+    );
+
+    await new Promise((r) => setTimeout(r, 500));
 
     try {
-      // Double passage pour mobile
-      await toPng(tempCard, { pixelRatio: 1, width: 1560, height: 940, skipFonts: true });
+      // ===== ULTRA HD EXPORT 4000px =====
+      const EXPORT_SIZE = 4000;
+      const ratio = 1560 / 940;
+
+      const width = EXPORT_SIZE;
+      const height = Math.round(EXPORT_SIZE / ratio);
 
       const dataUrl = await toPng(tempCard, {
         pixelRatio: 3,
-        width: 1560,
-        height: 940,
-        skipFonts: true,
+        width,
+        height,
+        cacheBust: true,
+        skipFonts: false,
       });
 
       const link = document.createElement('a');
-      link.download = 'carte-aem.png';
+      link.download = 'carte-aem-ultra-hd.png';
       link.href = dataUrl;
       link.click();
+
     } catch (err) {
       console.error('Erreur export:', err);
     }
 
-    // Supprimer le wrapper temporaire
+    // ===== CLEAN =====
     document.body.removeChild(tempWrapper);
 
     setName('');
     setNumber('');
     setCity(cities[lang][0]);
     setPhoto(null);
+
     if (fileInputRef.current) fileInputRef.current.value = '';
+
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
