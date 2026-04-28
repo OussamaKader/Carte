@@ -312,10 +312,10 @@ export default function Home() {
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // 3. Attendre que TOUTES les polices du document soient prêtes
+    // 3. Attendre polices
     await document.fonts.ready;
-    document.body.offsetHeight; // forcer un reflow
-    await new Promise(resolve => setTimeout(resolve, 300));
+    document.body.offsetHeight;
+    await new Promise(resolve => setTimeout(resolve, 400));
 
     try {
       const canvas = await html2canvas(original, {
@@ -331,75 +331,80 @@ export default function Home() {
           const clonedCard = clonedDoc.getElementById('card-export');
           if (!clonedCard) return;
 
-          // ── Correctifs texte décalé ──────────────────────────────
+          // ── 1. Injecter CSS de base ───────────────────────────────
           const styleEl = clonedDoc.createElement('style');
           styleEl.textContent = `
-          * {
-            font-family: 'Plus Jakarta Sans', Arial, sans-serif !important;
-            -webkit-font-smoothing: antialiased;
-            text-rendering: geometricPrecision;
-          }
-          .card-inner * {
-            line-height: normal;
-          }
-          .card-inner .field        { line-height: 1.2; }
-          .card-inner .box          { line-height: 1.65; }
-          .card-inner .perks li     { line-height: 1.4; }
-          .card-inner .dates        { line-height: 2.2; margin-top: 0 !important; }
-
-          /* Panneau gauche */
-          .card-inner .left {
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: flex-start !important;
-            padding-top: 36px !important;
-          }
-
-          /* Panneau droit — clé principale du fix */
-          .card-inner .right {
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: flex-start !important;
-            padding-top: 32px !important;
-            padding-bottom: 60px !important;
-            gap: 0 !important;
-          }
-          .card-inner .right > * + * {
-            margin-top: 13px !important;
-          }
-
-          /* Contact rows */
-          .card-inner .contact-row {
-            display: flex !important;
-            align-items: center !important;
-          }
-
-          /* Perks */
-          .card-inner .perks {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 0 !important;
-          }
-          .card-inner .perks li + li {
-            margin-top: 10px !important;
-          }
+          * { font-family: 'Plus Jakarta Sans', Arial, sans-serif !important; }
+          .card-inner * { line-height: normal !important; vertical-align: baseline !important; }
+          .card-inner .field        { line-height: 1.2 !important; }
+          .card-inner .box          { line-height: 1.65 !important; }
+          .card-inner .perks li     { line-height: 1.4 !important; }
+          .card-inner .dates        { line-height: 1.8 !important; }
         `;
           clonedDoc.head.appendChild(styleEl);
 
-          // ── Logo ─────────────────────────────────────────────────
+          // ── 2. Manipuler directement le DOM (plus fiable que CSS) ─
+          const rightPanel = clonedCard.querySelector('.right') as HTMLElement | null;
+          if (rightPanel) {
+            rightPanel.style.cssText += `
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            align-items: flex-start !important;
+            padding: 36px 48px 80px 48px !important;
+            gap: 16px !important;
+            box-sizing: border-box !important;
+          `;
+          }
+
+          const leftPanel = clonedCard.querySelector('.left') as HTMLElement | null;
+          if (leftPanel) {
+            leftPanel.style.cssText += `
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            align-items: flex-start !important;
+            padding: 40px 40px 40px 40px !important;
+            gap: 12px !important;
+            box-sizing: border-box !important;
+          `;
+          }
+
+          // Supprimer margin-top: auto des dates (le vrai coupable)
+          const datesEl = clonedCard.querySelector('.dates') as HTMLElement | null;
+          if (datesEl) {
+            datesEl.style.marginTop = '0px';
+            datesEl.style.paddingTop = '4px';
+          }
+
+          // Fixer les perks
+          const perksList = clonedCard.querySelector('.perks') as HTMLElement | null;
+          if (perksList) {
+            perksList.style.gap = '10px';
+            perksList.style.display = 'flex';
+            perksList.style.flexDirection = 'column';
+          }
+
+          // Fixer photo-wrap
+          const photoWrap = clonedCard.querySelector('.photo-wrap') as HTMLElement | null;
+          if (photoWrap) {
+            photoWrap.style.marginBottom = '4px';
+          }
+
+          // ── 3. Logo ───────────────────────────────────────────────
           const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
           if (logoEl) {
             logoEl.src = logoB64;
             logoEl.crossOrigin = 'anonymous';
           }
 
-          // ── Photo membre ─────────────────────────────────────────
+          // ── 4. Photo membre ───────────────────────────────────────
           if (photo) {
             const photoEl = clonedCard.querySelector('.member-photo') as HTMLImageElement | null;
             if (photoEl) photoEl.src = photo;
           }
 
-          // ── Attendre que toutes les images soient chargées ───────
+          // ── 5. Attendre images ────────────────────────────────────
           await Promise.all(
             Array.from(clonedCard.querySelectorAll('img')).map(img =>
               img.complete
@@ -411,8 +416,9 @@ export default function Home() {
             )
           );
 
-          // ── Délai final pour stabiliser le rendu ─────────────────
-          await new Promise(resolve => setTimeout(resolve, 250));
+          // ── 6. Forcer reflow dans le clone ────────────────────────
+          clonedCard.getBoundingClientRect();
+          await new Promise(resolve => setTimeout(resolve, 300));
         },
       });
 
@@ -428,7 +434,7 @@ export default function Home() {
       return;
     }
 
-    // Reset du formulaire
+    // Reset
     setName('');
     setNumber('');
     setCity(cities[lang][0]);
