@@ -298,6 +298,9 @@ export default function Home() {
 
 
   const exportCard = async () => {
+    const wrapper = document.getElementById('card-export');
+    if (!wrapper) return;
+
     const { error } = await supabase
       .from('etudiants')
       .insert([{ nom: name, numero: number, ville: city }])
@@ -309,126 +312,42 @@ export default function Home() {
       return;
     }
 
-    // ===== WRAPPER TEMPORAIRE =====
-    const tempWrapper = document.createElement('div');
-    tempWrapper.style.cssText = `
-    position: fixed;
-    top: -10000px;
-    left: -10000px;
-    width: 4000px;
-    height: auto;
-    pointer-events: none;
-    z-index: 9999;
-    background: transparent;
-  `;
-    document.body.appendChild(tempWrapper);
-
-    const tempCard = document.createElement('div');
-    tempCard.style.cssText = `
-    width: 1560px;
-    height: 940px;
-    background: #dde1e8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transform: scale(1);
-  `;
-    tempWrapper.appendChild(tempCard);
-
-    const original = document.getElementById('card-export');
-    if (!original) return;
-
-    const clone = original.cloneNode(true) as HTMLElement;
-
-    // ===== IMAGE CONVERSION SAFE MOBILE =====
-    const toBase64 = (url: string): Promise<string> =>
-      new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.decoding = 'async';
-
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return resolve(url);
-
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
-        };
-
-        img.onerror = () => resolve(url);
-        img.src = url;
-      });
-
-    // ===== PHOTO =====
-    if (photo) {
-      const photoEl = clone.querySelector('.member-photo') as HTMLImageElement | null;
-      if (photoEl) photoEl.src = await toBase64(photo);
-    }
-
-    // ===== LOGO =====
-    const logoEl = clone.querySelector('.logo-right') as HTMLImageElement | null;
-    if (logoEl) {
-      logoEl.src = await toBase64(window.location.origin + '/logo-aem.png');
-    }
-
-    tempCard.appendChild(clone);
-
-    // ===== WAIT FULL RENDER (IMPORTANT MOBILE) =====
     await document.fonts.ready;
 
-    const images = Array.from(tempCard.querySelectorAll('img'));
-    await Promise.all(
-      images.map(
-        (img) =>
-          new Promise((res) => {
-            if (img.complete) return res(true);
-            img.onload = () => res(true);
-            img.onerror = () => res(true);
-          })
-      )
-    );
+    wrapper.style.left = '0';
+    wrapper.style.top = '0';
+    wrapper.style.zIndex = '9999';
+    wrapper.style.opacity = '1';
 
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 100));
 
     try {
-      // ===== ULTRA HD EXPORT 4000px =====
-      const EXPORT_SIZE = 4000;
-      const ratio = 1560 / 940;
-
-      const width = EXPORT_SIZE;
-      const height = Math.round(EXPORT_SIZE / ratio);
-
-      const dataUrl = await toPng(tempCard, {
+      const dataUrl = await toPng(wrapper, {
         pixelRatio: 3,
-        width,
-        height,
-        cacheBust: true,
-        skipFonts: false,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
       });
 
+      wrapper.style.left = '-9999px';
+      wrapper.style.zIndex = '-1';
+      wrapper.style.opacity = '0';
+
       const link = document.createElement('a');
-      link.download = 'carte-aem-ultra-hd.png';
+      link.download = 'carte-aem.png';
       link.href = dataUrl;
       link.click();
-
     } catch (err) {
       console.error('Erreur export:', err);
+      wrapper.style.left = '-9999px';
+      wrapper.style.zIndex = '-1';
+      wrapper.style.opacity = '0';
     }
-
-    // ===== CLEAN =====
-    document.body.removeChild(tempWrapper);
 
     setName('');
     setNumber('');
     setCity(cities[lang][0]);
     setPhoto(null);
-
-    if (fileInputRef.current) fileInputRef.current.value = '';
-
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
