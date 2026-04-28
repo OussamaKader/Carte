@@ -281,26 +281,8 @@ export default function Home() {
     reader.onload = () => setPhoto(reader.result as string);
     reader.readAsDataURL(file);
   };
-  const waitForImages = (element: HTMLElement) => {
-    const images = Array.from(element.querySelectorAll("img"));
-
-    return Promise.all(
-      images.map((img) => {
-        if (img.complete) return Promise.resolve();
-
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
-      })
-    );
-  };
-
 
   const exportCard = async () => {
-    const wrapper = document.getElementById('card-export');
-    if (!wrapper) return;
-
     const { error } = await supabase
       .from('etudiants')
       .insert([{ nom: name, numero: number, ville: city }])
@@ -312,26 +294,115 @@ export default function Home() {
       return;
     }
 
+    // ── 1. Pré-convertir toutes les images en base64 AVANT tout DOM ──
+    const toBase64 = (url: string): Promise<string> =>
+      new Promise((resolve) => {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext('2d')!.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => {
+          // Fallback : fetch + blob (contourne CORS sur mobile)
+          fetch(url)
+            .then(r => r.blob())
+            .then(blob => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            })
+            .catch(() => resolve(url));
+        };
+        img.src = url + '?t=' + Date.now(); // cache-bust
+      });
+
+    const logoUrl = window.location.origin + '/logo-aem.png';
+
+    // Convertir en parallèle
+    const [photoB64, logoB64] = await Promise.all([
+      photo ? toBase64(photo) : Promise.resolve(null),
+      toBase64(logoUrl),
+    ]);
+
+    // ── 2. Construire le wrapper temporaire ──
+    const tempWrapper = document.createElement('div');
+    tempWrapper.style.cssText = `
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 1560px;
+    height: 940px;
+    pointer-events: none;
+    z-index: 9999;
+  `;
+    document.body.appendChild(tempWrapper);
+
+    const tempCard = document.createElement('div');
+    tempCard.style.cssText = `
+    width: 1560px;
+    height: 940px;
+    background: #dde1e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+    tempWrapper.appendChild(tempCard);
+
+    const original = document.getElementById('card-export');
+    if (!original) return;
+    const clone = original.cloneNode(true) as HTMLElement;
+
+    // ── 3. Injecter les base64 directement dans le clone ──
+    if (photoB64) {
+      const photoEl = clone.querySelector('.member-photo') as HTMLImageElement | null;
+      if (photoEl) {
+        photoEl.src = photoB64;
+        photoEl.crossOrigin = '';
+      }
+    }
+
+    const logoEl = clone.querySelector('.logo-right') as HTMLImageElement | null;
+    if (logoEl) {
+      logoEl.src = logoB64;
+      logoEl.crossOrigin = '';
+    }
+
+    tempCard.appendChild(clone);
+
+    // ── 4. Attendre fonts + rendu images ──
     await document.fonts.ready;
 
-    wrapper.style.left = '0';
-    wrapper.style.top = '0';
-    wrapper.style.zIndex = '9999';
-    wrapper.style.opacity = '1';
+    // Attendre que les <img> du clone soient complètes
+    const cloneImgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[];
+    await Promise.all(
+      cloneImgs.map(img =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>(res => {
+            img.onload = () => res();
+            img.onerror = () => res();
+          })
+      )
+    );
 
-    await new Promise((r) => setTimeout(r, 100));
+    // Délai extra pour mobile (rendu CSS)
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
-      const dataUrl = await toPng(wrapper, {
+      // Premier passage (chauffe le cache de html-to-image)
+      await toPng(tempCard, { pixelRatio: 1, width: 1560, height: 940, skipFonts: true });
+
+      // Deuxième passage haute résolution
+      const dataUrl = await toPng(tempCard, {
         pixelRatio: 3,
         width: 1560,
         height: 940,
         skipFonts: true,
       });
-
-      wrapper.style.left = '-9999px';
-      wrapper.style.zIndex = '-1';
-      wrapper.style.opacity = '0';
 
       const link = document.createElement('a');
       link.download = 'carte-aem.png';
@@ -339,15 +410,16 @@ export default function Home() {
       link.click();
     } catch (err) {
       console.error('Erreur export:', err);
-      wrapper.style.left = '-9999px';
-      wrapper.style.zIndex = '-1';
-      wrapper.style.opacity = '0';
+      alert('Erreur lors de la génération de la carte. Réessayez.');
     }
+
+    document.body.removeChild(tempWrapper);
 
     setName('');
     setNumber('');
     setCity(cities[lang][0]);
     setPhoto(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
