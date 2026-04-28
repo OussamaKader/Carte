@@ -1,11 +1,12 @@
 ﻿'use client';
 
-import { useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
+
+import { toPng } from 'html-to-image';
 import './page.css';
 import { supabase } from './supabaseClient';
 import Header from './Header';
 import Footer from './Footer';
+import { useState, useRef, useEffect } from 'react';
 
 type Lang = 'fr' | 'ar';
 
@@ -148,9 +149,10 @@ const Wave = () => (
 );
 
 function CardContent({
-  name, number, city, photo, lang,
+  name, number, city, photo, lang, logoSrc,
 }: {
-  name: string; number: string; city: string; photo: string | null; lang: Lang;
+  name: string; number: string; city: string;
+  photo: string | null; lang: Lang; logoSrc: string;  
 }) {
   const t = translations[lang];
   const today = new Date();
@@ -266,6 +268,19 @@ export default function Home() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoBase64, setLogoBase64] = useState<string>('/logo-aem.png');
+  useEffect(() => {
+    fetch('/logo-aem.png')
+      .then(r => r.blob())
+      .then(blob => new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(blob);
+      }))
+      .then(setLogoBase64)
+      .catch(() => { }); // fallback silencieux → garde l'URL originale
+  }, []);
 
   const t = translations[lang];
 
@@ -294,69 +309,28 @@ export default function Home() {
       return;
     }
 
-    const original = document.getElementById('card-export');
-    if (!original) return;
+    const element = document.getElementById('card-export');
+    if (!element) return;
 
-    const urlToBase64 = (url: string): Promise<string> =>
-      fetch(url)
-        .then(r => r.blob())
-        .then(blob => new Promise<string>((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = () => res(reader.result as string);
-          reader.onerror = rej;
-          reader.readAsDataURL(blob);
-        }))
-        .catch(() => url);
-
-    const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
+    // Attendre les fonts
     await document.fonts.ready;
 
     try {
-      const canvas = await html2canvas(original, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: false,
+      // Premier appel ignoré (cache les ressources), second appel propre
+      // Technique recommandée par html-to-image pour éviter les artefacts
+      await toPng(element, { pixelRatio: 3, skipFonts: true });
+      const dataUrl = await toPng(element, {
+        pixelRatio: 3,
+        width: 1560,
+        height: 940,
         backgroundColor: '#dde1e8',
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: 1560,
-        windowHeight: 940,
-        onclone: async (clonedDoc) => {
-          const clonedCard = clonedDoc.getElementById('card-export');
-          if (!clonedCard) return;
-
-          // Logo
-          const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
-          if (logoEl) {
-            logoEl.src = logoB64; // déjà chargé avant onclone
-            logoEl.crossOrigin = 'anonymous';
-          }
-
-          // Photo membre
-          if (photo) {
-            const photoEl = clonedCard.querySelector('.member-photo') as HTMLImageElement | null;
-            if (photoEl) photoEl.src = photo;
-          }
-
-          // Attendre que les images soient chargées dans le clone
-          await Promise.all(
-            Array.from(clonedCard.querySelectorAll('img')).map(img =>
-              img.complete ? Promise.resolve() :
-                new Promise<void>(resolve => {
-                  img.onload = () => resolve();
-                  img.onerror = () => resolve();
-                })
-            )
-          );
-        },
+        skipFonts: true, 
       });
 
-      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = 'carte-aem.png';
       link.href = dataUrl;
       link.click();
-
     } catch (err) {
       console.error('Erreur export:', err);
       alert('Erreur lors de la génération. Réessayez.');
@@ -512,7 +486,8 @@ export default function Home() {
       {/* ===== WRAPPER INVISIBLE — 0x0, overflow hidden ===== */}
       <div id="card-export-wrapper">
         <div id="card-export">
-          <CardContent name={name} number={number} city={city} photo={photo} lang={lang} />
+        
+          <CardContent name={name} number={number} city={city} photo={photo} lang={lang} logoSrc={logoBase64} />
         </div>
       </div>
 
