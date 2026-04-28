@@ -96,7 +96,12 @@ export default function Footer({ lang }: FooterProps) {
                   <path d="M6.6 10.8a15.4 15.4 0 006.6 6.6l2.2-2.2a1 1 0 011.05-.24 11.5 11.5 0 003.6.72 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.52 3.6a1 1 0 01-.24 1.04L6.6 10.8z" />
                 </svg>
               </span>
-              <a href={`tel:${content.contact.phone}`}>{content.contact.phone}</a>
+              <a
+                href={`tel:${content.contact.phone}`}
+                style={{ direction: 'ltr', display: 'inline-block' }}
+              >
+                {content.contact.phone}
+              </a>
             </li>
           </ul>
         </div>

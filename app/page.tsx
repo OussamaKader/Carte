@@ -78,7 +78,7 @@ const translations = {
     numberLabel: 'رقم العضو',
     numberPlaceholder: 'مثال: 47185763',
     cityLabel: 'المدينة',
-    download: 'تحميل البطاقة ',
+    download: 'تحميل البطاقة  ',
     success: ' تم إنشاء البطاقة بنجاح!',
     error: 'خطأ في التسجيل',
     cardBadge: 'البطاقة الرسمية',
@@ -450,13 +450,13 @@ export default function Home() {
             ))}
           </select>
 
-          <button onClick={exportCard}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }}>
+          <button onClick={exportCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {t.download}
+            <span>{t.download}</span>
           </button>
         </div>
       </section>
