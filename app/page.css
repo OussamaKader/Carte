@@ -1205,7 +1205,7 @@ body {
   padding: 40px 48px 90px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   background: #fff;
   position: relative;
 }
@@ -1321,7 +1321,7 @@ body {
   color: #555;
   font-weight: 700;
   line-height: 2.2;
-  margin-top: auto;
+  margin-top: 16px;
   /* ← pousse les dates vers le bas */
 }
 
@@ -1378,6 +1378,7 @@ body {
   position: relative;
   padding: 40px 48px 90px; /* était 130px */
   /* ← REMPLACE padding-bottom seul */
+   gap: 18px; /* ← ajouter */
 }
 
 [dir="rtl"] .badge {
