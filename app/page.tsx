@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import './page.css';
 import { supabase } from './supabaseClient';
+const [whatsapp, setWhatsapp] = useState<string>("");
 import Header from './Header';
 import Footer from './Footer';
 import { toPng } from 'html-to-image';
@@ -439,7 +440,7 @@ export default function Home() {
     ctx.letterSpacing = '0px';
 
     const contacts = [
-      { color: '#f97316', label: `SG : ${sgName}` },
+      { color: '#f97316', label: `SG : ${name}` },
       { color: '#22c55e', label: whatsapp },
       { color: '#3b82f6', label: 'AEM-MAROC' },
     ];
