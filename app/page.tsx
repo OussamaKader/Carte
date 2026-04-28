@@ -325,18 +325,19 @@ export default function Home() {
         )
       );
 
-      // ✅ html2canvas — fiable sur iOS Safari
       const canvas = await html2canvas(wrapper, {
-        scale: 2,
+        scale: 4, // ✅ HD — 4x au lieu de 2x
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#dde1e8',
         width: 1560,
         height: 940,
         logging: false,
+        imageTimeout: 0,      // ✅ pas de timeout sur les images
+        removeContainer: true, // ✅ nettoie après capture
       });
 
-      const dataUrl = canvas.toDataURL('image/png');
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], 'carte-aem.png', { type: 'image/png' });
