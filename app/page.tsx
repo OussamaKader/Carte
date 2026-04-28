@@ -6,6 +6,7 @@ import './page.css';
 import { supabase } from './supabaseClient';
 import Header from './Header';
 import Footer from './Footer';
+import { toPng } from 'html-to-image';
 
 type Lang = 'fr' | 'ar';
 
@@ -282,7 +283,7 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  const exportCard = async () => {
+const exportCard = async () => {
     const { error } = await supabase
       .from('etudiants')
       .insert([{ nom: name, numero: number, ville: city }])
@@ -294,101 +295,150 @@ export default function Home() {
       return;
     }
 
-    // ── Helper : URL → base64 via fetch ──
-    const urlToBase64 = async (url: string): Promise<string> => {
-      try {
-        const r = await fetch(url);
-        const blob = await r.blob();
-        return await new Promise<string>((res, rej) => {
+    const urlToBase64 = (url: string): Promise<string> =>
+      fetch(url)
+        .then(r => r.blob())
+        .then(blob => new Promise<string>((res, rej) => {
           const reader = new FileReader();
           reader.onload = () => res(reader.result as string);
           reader.onerror = rej;
           reader.readAsDataURL(blob);
-        });
-      } catch {
-        return url;
-      }
-    };
+        }))
+        .catch(() => url);
 
-    // ── 1. Convertir logo en base64 ──
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
 
-    // ── 2. Récupérer les éléments DOM ──
-    const cardExport = document.getElementById('card-export');
-    const wrapper = document.getElementById('card-export-wrapper') as HTMLElement;
-    if (!cardExport || !wrapper) return;
+    // ── Wrapper hors écran ──
+    const tempWrapper = document.createElement('div');
+    tempWrapper.style.cssText = `
+      position: fixed;
+      top: -99999px;
+      left: -99999px;
+      width: 1560px;
+      height: 940px;
+      pointer-events: none;
+      z-index: 9999;
+    `;
+    document.body.appendChild(tempWrapper);
 
-    const logoEl = cardExport.querySelector('.logo-right') as HTMLImageElement | null;
-    const photoEl = cardExport.querySelector('.member-photo') as HTMLImageElement | null;
-    const prevLogoSrc = logoEl?.src ?? '';
-    const prevPhotoSrc = photoEl?.src ?? '';
+    const tempCard = document.createElement('div');
+    tempCard.style.cssText = `
+      width: 1560px;
+      height: 940px;
+      background: #dde1e8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+    tempWrapper.appendChild(tempCard);
 
-    // ── 3. Injecter les base64 dans le DOM caché ──
+    const original = document.getElementById('card-export');
+    if (!original) { document.body.removeChild(tempWrapper); return; }
+
+    const clone = original.cloneNode(true) as HTMLElement;
+    tempCard.appendChild(clone);
+
+    // ── ✅ FIX PRINCIPAL : Forcer les dimensions et le layout du clone ──
+    // On écrase les styles calculés pour mobile en imposant les valeurs desktop
+    clone.style.cssText += `
+      width: 1400px !important;
+      height: 840px !important;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: stretch !important;
+      position: relative !important;
+      transform: none !important;
+      top: auto !important;
+      left: auto !important;
+      margin: 0 !important;
+    `;
+
+    // ── Forcer aussi les panneaux gauche/droite si besoin ──
+    // Adapter les sélecteurs à votre structure réelle
+    const leftPanel = clone.querySelector('.left-panel') as HTMLElement | null;
+    if (leftPanel) {
+      leftPanel.style.cssText += `
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 420px !important;
+        min-width: 420px !important;
+        height: 840px !important;
+        position: relative !important;
+        top: auto !important;
+        transform: none !important;
+      `;
+    }
+
+    const rightPanel = clone.querySelector('.right-panel') as HTMLElement | null;
+    if (rightPanel) {
+      rightPanel.style.cssText += `
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 !important;
+        height: 840px !important;
+        position: relative !important;
+        top: auto !important;
+        transform: none !important;
+        overflow: hidden !important;
+      `;
+    }
+
+    // ── Injecter les images base64 ──
+    if (photo) {
+      const photoEl = clone.querySelector('.member-photo') as HTMLImageElement | null;
+      if (photoEl) photoEl.src = photo;
+    }
+
+    const logoEl = clone.querySelector('.logo-right') as HTMLImageElement | null;
     if (logoEl) logoEl.src = logoB64;
-    if (photoEl && photo) photoEl.src = photo;
 
-    // ── 4. Rendre visible à position fixe (0,0) ──
-    wrapper.style.cssText = `
-    position: fixed;
-    top: 0 !important;
-    left: 0 !important;
-    width: 1560px;
-    height: 940px;
-    overflow: visible;
-    pointer-events: none;
-    z-index: 99999;
-    background: transparent;
-  `;
-
+    // ── Attendre fonts + images ──
     await document.fonts.ready;
-    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const allImgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[];
+    await Promise.all(
+      allImgs.map(img =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>(resolve => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            })
+      )
+    );
+
+    // Délai pour que le layout se recalcule après les style overrides
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     try {
-      const canvas = await html2canvas(cardExport, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#dde1e8',
-        logging: false,
-        imageTimeout: 8000,
-        scrollX: 0,
-        scrollY: 0,
-        y: cardExport.getBoundingClientRect().top * -1,
-        onclone: (_doc, el) => {
-          const img1 = el.querySelector('.logo-right') as HTMLImageElement | null;
-          const img2 = el.querySelector('.member-photo') as HTMLImageElement | null;
-          if (img1) img1.src = logoB64;
-          if (img2 && photo) img2.src = photo;
-          el.style.position = 'absolute';
-          el.style.top = '0';
-          el.style.left = '0';
-        },
+      // Chauffe du cache
+      await toPng(tempCard, {
+        pixelRatio: 1,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
       });
 
-      const dataUrl = canvas.toDataURL('image/png');
+      // Export final
+      const dataUrl = await toPng(tempCard, {
+        pixelRatio: 3,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
+      });
+
       const link = document.createElement('a');
       link.download = 'carte-aem.png';
       link.href = dataUrl;
       link.click();
-
     } catch (err) {
       console.error('Erreur export:', err);
       alert('Erreur lors de la génération. Réessayez.');
     }
 
-    // ── 5. Restaurer le DOM ──
-    wrapper.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 0;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: -1;
-  `;
-    if (logoEl) logoEl.src = prevLogoSrc;
-    if (photoEl) photoEl.src = prevPhotoSrc;
+    document.body.removeChild(tempWrapper);
 
     setName('');
     setNumber('');
@@ -398,7 +448,7 @@ export default function Home() {
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
-  
+
   return (
     <div className="app-container" dir={t.dir}>
       <Header lang={lang} onSwitchLang={switchLang} />
