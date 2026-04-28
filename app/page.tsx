@@ -283,7 +283,6 @@ export default function Home() {
   };
 
   const exportCard = async () => {
-    // 1. Sauvegarder en BDD
     const { error } = await supabase
       .from('etudiants')
       .insert([{ nom: name, numero: number, ville: city }])
@@ -298,7 +297,6 @@ export default function Home() {
     const original = document.getElementById('card-export');
     if (!original) return;
 
-    // 2. Convertir URL → base64
     const urlToBase64 = (url: string): Promise<string> =>
       fetch(url)
         .then(r => r.blob())
@@ -311,11 +309,7 @@ export default function Home() {
         .catch(() => url);
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
-
-    // 3. Attendre que TOUTES les polices du document soient prêtes
     await document.fonts.ready;
-    document.body.offsetHeight;
-    await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
       const canvas = await html2canvas(original, {
@@ -331,202 +325,10 @@ export default function Home() {
           const clonedCard = clonedDoc.getElementById('card-export');
           if (!clonedCard) return;
 
-          const styleEl = clonedDoc.createElement('style');
-          styleEl.textContent = `
-            * {
-              font-family: 'Plus Jakarta Sans', Arial, sans-serif !important;
-              -webkit-font-smoothing: antialiased;
-              text-rendering: geometricPrecision;
-            }
-
-            .card-inner {
-              display: grid !important;
-              grid-template-columns: 34% 66% !important;
-              width: 1300px !important;
-              height: 750px !important;
-            }
-
-            .card-inner .left {
-              display: flex !important;
-              flex-direction: column !important;
-              padding: 48px 40px 40px !important;
-              background: #1b3a6b !important;
-            }
-
-            .card-inner .left > * + * {
-              margin-top: 14px !important;
-            }
-
-            .card-inner .right {
-              display: flex !important;
-              flex-direction: column !important;
-              padding: 36px 48px 70px !important;
-              background: #fff !important;
-            }
-
-            .card-inner .right > * + * {
-              margin-top: 18px !important;
-            }
-
-            .card-inner .right h1 {
-              font-size: 32px !important;
-              font-weight: 900 !important;
-              line-height: 1.15 !important;
-              color: #1b3a6b !important;
-            }
-
-            .card-inner .badge {
-              font-size: 12px !important;
-              letter-spacing: 2px !important;
-              font-weight: 800 !important;
-              padding: 7px 22px !important;
-              line-height: 1.4 !important;
-            }
-
-            .card-inner .title-row {
-              display: flex !important;
-              align-items: center !important;
-              gap: 20px !important;
-            }
-
-            .card-inner .logo-right {
-              width: 75px !important;
-              height: 75px !important;
-            }
-
-            .card-inner .box {
-              font-size: 15px !important;
-              line-height: 1.65 !important;
-              padding: 18px 20px !important;
-            }
-
-            .card-inner .tag {
-              font-size: 15px !important;
-              line-height: 1.5 !important;
-              padding: 12px 18px !important;
-            }
-
-            .card-inner .perks {
-              display: flex !important;
-              flex-direction: column !important;
-              list-style: none !important;
-            }
-
-            .card-inner .perks li + li {
-              margin-top: 12px !important;
-            }
-
-            .card-inner .perks li {
-              display: flex !important;
-              align-items: center !important;
-              gap: 12px !important;
-              font-size: 15px !important;
-              font-weight: 800 !important;
-              line-height: 1.4 !important;
-              color: #1b3a6b !important;
-            }
-
-            .card-inner .perk-dot {
-              width: 11px !important;
-              height: 11px !important;
-              border-radius: 50% !important;
-              flex-shrink: 0 !important;
-            }
-
-            .card-inner .perk-dot.red  { background: #c8102e !important; }
-            .card-inner .perk-dot.green { background: #006233 !important; }
-            .card-inner .perk-dot.blue  { background: #1b3a6b !important; }
-
-            .card-inner .dates {
-              font-size: 14px !important;
-              font-weight: 700 !important;
-              line-height: 1.8 !important;
-              color: #555 !important;
-            }
-
-            .card-inner .label {
-              font-size: 10px !important;
-              letter-spacing: 2px !important;
-              opacity: 0.7 !important;
-              text-transform: uppercase !important;
-              font-weight: 700 !important;
-              line-height: 1.4 !important;
-            }
-
-            .card-inner .field {
-              font-size: 15px !important;
-              font-weight: 700 !important;
-              line-height: 1.2 !important;
-              padding: 12px 16px !important;
-              background: rgba(255,255,255,0.13) !important;
-              border-radius: 10px !important;
-            }
-
-            .card-inner .contact-row {
-              display: flex !important;
-              align-items: center !important;
-              gap: 8px !important;
-              min-height: 44px !important;
-              font-size: 12px !important;
-              font-weight: 700 !important;
-              line-height: 1.4 !important;
-              background: rgba(255,255,255,0.13) !important;
-              padding: 6px 12px !important;
-              border-radius: 8px !important;
-            }
-
-            .card-inner .contact-icon {
-              width: 32px !important;
-              height: 32px !important;
-              border-radius: 8px !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              flex-shrink: 0 !important;
-            }
-
-            .card-inner .contact-icon.fb { background: #1877f2 !important; }
-            .card-inner .contact-icon.wa { background: #25d366 !important; }
-            .card-inner .contact-icon.sg { background: #e67e22 !important; }
-
-            .card-inner .photo-wrap {
-              display: flex !important;
-              justify-content: center !important;
-              margin-bottom: 8px !important;
-            }
-
-            .card-inner .member-photo {
-              width: 140px !important;
-              height: 140px !important;
-              border-radius: 50% !important;
-              object-fit: cover !important;
-              border: 4px solid rgba(255,255,255,0.5) !important;
-            }
-
-            .card-inner .divider {
-              height: 3px !important;
-              border-radius: 1px !important;
-              background: linear-gradient(90deg, #1b3a6b 43%, #c8102e 43%, #c8102e 71%, #006233 71%) !important;
-              margin: 2px 0 !important;
-            }
-
-            .wave-footer {
-              position: absolute !important;
-              bottom: 0 !important;
-              left: 0 !important;
-              right: 0 !important;
-              height: 80px !important;
-              overflow: hidden !important;
-              z-index: 10 !important;
-              grid-column: 1 / -1 !important;
-            }
-          `;
-          clonedDoc.head.appendChild(styleEl);
-
           // Logo
           const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
           if (logoEl) {
-            logoEl.src = logoB64;
+            logoEl.src = logoB64; // déjà chargé avant onclone
             logoEl.crossOrigin = 'anonymous';
           }
 
@@ -536,7 +338,7 @@ export default function Home() {
             if (photoEl) photoEl.src = photo;
           }
 
-          // Attendre images dans le clone
+          // Attendre que les images soient chargées dans le clone
           await Promise.all(
             Array.from(clonedCard.querySelectorAll('img')).map(img =>
               img.complete ? Promise.resolve() :
@@ -546,8 +348,6 @@ export default function Home() {
                 })
             )
           );
-
-          await new Promise(resolve => setTimeout(resolve, 200));
         },
       });
 
