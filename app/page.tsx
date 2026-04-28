@@ -297,27 +297,45 @@ export default function Home() {
       return;
     }
 
-    // ✅ CORRECTION MOBILE : précharger la photo avant l'export
-    if (photo) {
-      await new Promise<void>((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
-        img.src = photo;
+    // Convertir une URL en base64 via canvas
+    const toBase64 = (url: string): Promise<string> =>
+      new Promise((resolve) => {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext('2d')!.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => resolve(url); // fallback
+        img.src = url;
       });
+
+    // Injecter le logo en base64
+    const logoEl = wrapper.querySelector('.logo-right') as HTMLImageElement | null;
+    if (logoEl) {
+      logoEl.src = await toBase64(window.location.origin + '/logo-aem.png');
+    }
+
+    // Injecter la photo membre en base64
+    const photoEl = wrapper.querySelector('.member-photo') as HTMLImageElement | null;
+    if (photoEl && photo) {
+      photoEl.src = await toBase64(photo);
     }
 
     await document.fonts.ready;
 
     try {
+      // Premier passage pour forcer le rendu mobile
+      await toPng(wrapper, { pixelRatio: 1, width: 1560, height: 940, skipFonts: true });
+
       const dataUrl = await toPng(wrapper, {
         pixelRatio: 3,
         width: 1560,
         height: 940,
         skipFonts: true,
-        // ✅ CORRECTION MOBILE : forcer l'inclusion des images cachées
-        cacheBust: true,
-        includeQueryParams: true,
       });
 
       const link = document.createElement('a');
