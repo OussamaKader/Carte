@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import './page.css';
 import { supabase } from './supabaseClient';
-const [whatsapp, setWhatsapp] = useState<string>("");
 import Header from './Header';
 import Footer from './Footer';
 import { toPng } from 'html-to-image';
@@ -296,296 +295,156 @@ export default function Home() {
       return;
     }
 
-    // ── Helper : charger une image (base64 ou URL) → HTMLImageElement ──
-    const loadImage = (src: string): Promise<HTMLImageElement> =>
-      new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = src;
-      });
-
-    // ── Helper : URL → base64 ──
-    const urlToBase64 = async (url: string): Promise<string> => {
-      try {
-        const r = await fetch(url);
-        const blob = await r.blob();
-        return await new Promise<string>((res, rej) => {
+    const urlToBase64 = (url: string): Promise<string> =>
+      fetch(url)
+        .then(r => r.blob())
+        .then(blob => new Promise<string>((res, rej) => {
           const reader = new FileReader();
           reader.onload = () => res(reader.result as string);
           reader.onerror = rej;
           reader.readAsDataURL(blob);
-        });
-      } catch {
-        return url;
-      }
-    };
+        }))
+        .catch(() => url);
 
-    // ── Dimensions canvas (ratio 1560×940) ──
-    const W = 1560;
-    const H = 940;
-    const LEFT_W = 520;   // panneau gauche bleu
-    const PADDING = 48;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext('2d')!;
-
-    // ── Charger les images en parallèle ──
+    // ── ✅ FIX 1 : Charger TOUTES les images en base64 AVANT de toucher au DOM ──
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
-    const [logoImg, photoImg] = await Promise.all([
-      loadImage(logoB64).catch(() => null),
-      photo ? loadImage(photo).catch(() => null) : Promise.resolve(null),
-    ]);
+    const photoB64 = photo ? photo : null;
 
-    // ════════════════════════════════════════
-    // 1. FOND GLOBAL
-    // ════════════════════════════════════════
-    ctx.fillStyle = '#dde1e8';
-    ctx.roundRect(0, 0, W, H, 32);
-    ctx.fill();
+    // ── Wrapper hors écran ──
+    const tempWrapper = document.createElement('div');
+    tempWrapper.style.cssText = `
+    position: fixed;
+    top: -99999px;
+    left: -99999px;
+    width: 1560px;
+    height: 940px;
+    pointer-events: none;
+    z-index: 9999;
+  `;
+    document.body.appendChild(tempWrapper);
 
-    // ── Carte blanche (shadow simulée) ──
-    ctx.shadowColor = 'rgba(0,0,0,0.12)';
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 8;
-    ctx.fillStyle = '#ffffff';
-    ctx.roundRect(80, 50, W - 160, H - 100, 24);
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
+    const tempCard = document.createElement('div');
+    tempCard.style.cssText = `
+    width: 1560px;
+    height: 940px;
+    background: #dde1e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+    tempWrapper.appendChild(tempCard);
 
-    // ════════════════════════════════════════
-    // 2. PANNEAU GAUCHE (bleu foncé)
-    // ════════════════════════════════════════
-    ctx.fillStyle = '#1a2a5e';
-    ctx.beginPath();
-    ctx.roundRect(80, 50, LEFT_W, H - 100, [24, 0, 0, 24]);
-    ctx.fill();
+    const original = document.getElementById('card-export');
+    if (!original) { document.body.removeChild(tempWrapper); return; }
 
-    // ── Photo de profil ──
-    const photoX = 80 + LEFT_W / 2;
-    const photoY = 185;
-    const photoR = 90;
+    // ── ✅ FIX 2 : Injecter les images dans l'ORIGINAL avant de cloner ──
+    // Sauvegarder les valeurs originales pour les restaurer après
+    const originalPhotoSrc = (original.querySelector('.member-photo') as HTMLImageElement | null)?.src ?? null;
+    const originalLogoSrc = (original.querySelector('.logo-right') as HTMLImageElement | null)?.src ?? null;
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
-    ctx.clip();
-    if (photoImg) {
-      // Centrer/couvrir l'image dans le cercle
-      const size = photoR * 2;
-      const aspect = photoImg.width / photoImg.height;
-      let sx = 0, sy = 0, sw = photoImg.width, sh = photoImg.height;
-      if (aspect > 1) { sw = photoImg.height; sx = (photoImg.width - sw) / 2; }
-      else { sh = photoImg.width; sy = (photoImg.height - sh) / 2; }
-      ctx.drawImage(photoImg, sx, sy, sw, sh, photoX - photoR, photoY - photoR, size, size);
-    } else {
-      ctx.fillStyle = '#2d3f7a';
-      ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
+    const photoElOriginal = original.querySelector('.member-photo') as HTMLImageElement | null;
+    if (photoElOriginal && photoB64) photoElOriginal.src = photoB64;
 
-    // Bordure cercle
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(photoX, photoY, photoR, 0, Math.PI * 2);
-    ctx.stroke();
+    const logoElOriginal = original.querySelector('.logo-right') as HTMLImageElement | null;
+    if (logoElOriginal) logoElOriginal.src = logoB64;
 
-    // ── Labels + champs ──
-    const fields = [
-      { label: 'NOM DU MEMBRE', value: name },
-      { label: 'N° MEMBRE', value: number },
-      { label: 'VILLE', value: city },
-    ];
+    // Attendre que les images soient chargées dans l'original
+    await document.fonts.ready;
+    const originalImgs = Array.from(original.querySelectorAll('img')) as HTMLImageElement[];
+    await Promise.all(
+      originalImgs.map(img =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>(resolve => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          })
+      )
+    );
 
-    let fieldY = 310;
-    ctx.font = '600 20px system-ui, sans-serif';
+    // ── ✅ FIX 3 : Cloner APRÈS que les images soient prêtes dans l'original ──
+    const clone = original.cloneNode(true) as HTMLElement;
 
-    fields.forEach(({ label, value }) => {
-      // Label
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = '500 18px system-ui, sans-serif';
-      ctx.letterSpacing = '2px';
-      ctx.fillText(label, 80 + PADDING, fieldY);
-      fieldY += 28;
+    // ── Restaurer l'original (UX : ne pas modifier l'affichage visible) ──
+    if (photoElOriginal && originalPhotoSrc !== null) photoElOriginal.src = originalPhotoSrc;
+    if (logoElOriginal && originalLogoSrc !== null) logoElOriginal.src = originalLogoSrc;
 
-      // Champ arrondi
-      const fieldH = 52;
-      const fieldX = 80 + PADDING;
-      const fieldW = LEFT_W - PADDING * 2;
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath();
-      ctx.roundRect(fieldX, fieldY, fieldW, fieldH, 10);
-      ctx.fill();
+    tempCard.appendChild(clone);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '500 22px system-ui, sans-serif';
-      ctx.letterSpacing = '0px';
-      ctx.fillText(value || '', fieldX + 16, fieldY + 34);
-      fieldY += fieldH + 20;
-    });
+    // ── Forcer les dimensions desktop sur le clone (override mobile) ──
+    clone.style.cssText = `
+    width: 1400px !important;
+    height: 840px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    position: relative !important;
+    transform: none !important;
+    top: auto !important;
+    left: auto !important;
+    margin: 0 !important;
+  `;
 
-    // ── Réseaux & Contact ──
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '500 18px system-ui, sans-serif';
-    ctx.letterSpacing = '2px';
-    ctx.fillText('RÉSEAUX & CONTACT', 80 + PADDING, fieldY);
-    fieldY += 28;
-    ctx.letterSpacing = '0px';
-
-    const contacts = [
-      { color: '#f97316', label: `SG : ${name}` },
-      { color: '#22c55e', label: whatsapp },
-      { color: '#3b82f6', label: 'AEM-MAROC' },
-    ];
-
-    contacts.forEach(({ color, label }) => {
-      const bx = 80 + PADDING;
-      const bw = LEFT_W - PADDING * 2;
-      const bh = 48;
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath();
-      ctx.roundRect(bx, fieldY, bw, bh, 10);
-      ctx.fill();
-
-      // Icône colorée
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.roundRect(bx + 8, fieldY + 8, 32, 32, 8);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '400 20px system-ui, sans-serif';
-      ctx.fillText(label, bx + 52, fieldY + 31);
-      fieldY += bh + 12;
-    });
-
-    // ════════════════════════════════════════
-    // 3. PANNEAU DROIT (blanc)
-    // ════════════════════════════════════════
-    const RX = 80 + LEFT_W + 48; // X départ contenu droit
-    const RW = W - 160 - LEFT_W - 96; // largeur contenu droit
-
-    // Badge "CARTE OFFICIELLE"
-    ctx.fillStyle = '#1a2a5e';
-    ctx.beginPath();
-    ctx.roundRect(RX, 100, 220, 38, 6);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '600 18px system-ui, sans-serif';
-    ctx.letterSpacing = '1px';
-    ctx.fillText('CARTE OFFICIELLE', RX + 14, 124);
-    ctx.letterSpacing = '0px';
-
-    // Logo AEM
-    const logoSize = 80;
-    if (logoImg) {
-      ctx.drawImage(logoImg, RX, 158, logoSize, logoSize);
+    const leftPanel = clone.querySelector('.left-panel') as HTMLElement | null;
+    if (leftPanel) {
+      leftPanel.style.cssText = `
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      width: 420px !important;
+      min-width: 420px !important;
+      height: 840px !important;
+      position: relative !important;
+      top: auto !important;
+      transform: none !important;
+    `;
     }
 
-    // Titre association
-    ctx.fillStyle = '#1a2a5e';
-    ctx.font = '700 44px system-ui, sans-serif';
-    ctx.fillText('Association des Étudiants', RX + logoSize + 20, 200);
-    ctx.fillText('Mauritaniens au Maroc', RX + logoSize + 20, 252);
+    const rightPanel = clone.querySelector('.right-panel') as HTMLElement | null;
+    if (rightPanel) {
+      rightPanel.style.cssText = `
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      height: 840px !important;
+      position: relative !important;
+      top: auto !important;
+      transform: none !important;
+      overflow: hidden !important;
+    `;
+    }
 
-    // Séparateur tricolore
-    const sepY = 270;
-    const sepColors = ['#1a2a5e', '#cc0000', '#009900'];
-    const segW = RW / 3;
-    sepColors.forEach((c, i) => {
-      ctx.fillStyle = c;
-      ctx.fillRect(RX + i * segW, sepY, segW, 4);
-    });
+    // ── ✅ FIX 4 : Délai augmenté à 1200ms pour mobile (layout + images) ──
+    await new Promise(resolve => setTimeout(resolve, 1200));
 
-    // Description (bloc citation)
-    ctx.strokeStyle = '#1a2a5e';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(RX, 295);
-    ctx.lineTo(RX, 365);
-    ctx.stroke();
+    try {
+      // Chauffe du cache
+      await toPng(tempCard, {
+        pixelRatio: 1,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
+      });
 
-    ctx.fillStyle = '#444444';
-    ctx.font = '400 21px system-ui, sans-serif';
-    const descLines = [
-      "Une communauté dédiée à l'accueil, l'accompagnement et la réussite",
-      "des étudiants mauritaniens au Maroc, au sein d'un réseau solidaire,",
-      "académique et professionnel.",
-    ];
-    descLines.forEach((line, i) => ctx.fillText(line, RX + 20, 318 + i * 28));
+      // Export final
+      const dataUrl = await toPng(tempCard, {
+        pixelRatio: 3,
+        width: 1560,
+        height: 940,
+        skipFonts: true,
+      });
 
-    // Devise
-    ctx.fillStyle = '#888888';
-    ctx.font = 'italic 22px Georgia, serif';
-    ctx.fillText('Solidarité · Réussite · Excellence', RX, 415);
-
-    // Avantages
-    const avantages = [
-      { color: '#cc0000', text: 'Accès privilégié aux événements, conférences et ateliers' },
-      { color: '#009900', text: 'Mise en relation avec des étudiants, diplômés et professionnels' },
-      { color: '#1a2a5e', text: 'Accompagnement académique, mentorat et soutien personnalisé' },
-    ];
-
-    avantages.forEach(({ color, text }, i) => {
-      const ay = 460 + i * 52;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(RX + 10, ay, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#1a2a5e';
-      ctx.font = '600 22px system-ui, sans-serif';
-      ctx.fillText(text, RX + 28, ay + 7);
-    });
-
-    // Dates
-    const today = new Date();
-    const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const nextYear = new Date(today); nextYear.setFullYear(today.getFullYear() + 1);
-
-    ctx.fillStyle = '#333333';
-    ctx.font = '400 22px system-ui, sans-serif';
-    ctx.fillText(`Émise le : ${fmt(today)}`, RX, 630);
-    ctx.fillText(`Valable jusqu'au : ${fmt(nextYear)}`, RX, 662);
-
-    // ════════════════════════════════════════
-    // 4. VAGUE BAS (décorative)
-    // ════════════════════════════════════════
-    // dessinée sur toute la largeur de la carte
-    const waveY = H - 50 - 70;
-    [
-      { color: '#1a2a5e', offset: 0 },
-      { color: '#cc0000', offset: 18 },
-      { color: '#009900', offset: 36 },
-    ].forEach(({ color, offset }) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(80, waveY + offset);
-      ctx.bezierCurveTo(80 + (W - 160) * 0.3, waveY + offset - 30, 80 + (W - 160) * 0.7, waveY + offset + 30, W - 80, waveY + offset);
-      ctx.lineTo(W - 80, H - 50);
-      ctx.lineTo(80, H - 50);
-      ctx.closePath();
-      ctx.fill();
-    });
-
-    // ════════════════════════════════════════
-    // 5. EXPORT PNG
-    // ════════════════════════════════════════
-    canvas.toBlob(blob => {
-      if (!blob) { alert('Erreur génération'); return; }
-      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = 'carte-aem.png';
-      link.href = url;
+      link.href = dataUrl;
       link.click();
-      URL.revokeObjectURL(url);
-    }, 'image/png');
+    } catch (err) {
+      console.error('Erreur export:', err);
+      alert('Erreur lors de la génération. Réessayez.');
+    }
+
+    document.body.removeChild(tempWrapper);
 
     setName('');
     setNumber('');
