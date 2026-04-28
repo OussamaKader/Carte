@@ -1080,13 +1080,13 @@ body {
    ============================================= */
 #card-export-wrapper {
   position: fixed;
-  top: -9999px;
-  left: -9999px;
-  width: 1560px;
-  height: 940px;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
   pointer-events: none;
   z-index: -1;
-  visibility: hidden;
 }
 
 #card-export {
@@ -1213,8 +1213,7 @@ body {
 
 .badge {
   background: #1b3a6b;
-  display: flex;
-  /* ← MANQUANT */
+  display: flex;            /* ← MANQUANT */
   align-items: center;
   justify-content: center;
   color: #fff;
@@ -1239,19 +1238,16 @@ body {
   height: 75px;
   border-radius: 50%;
   object-fit: cover;
-  flex-shrink: 0;
-  /* le logo ne rétrécit jamais */
+  flex-shrink: 0;         /* le logo ne rétrécit jamais */
   border: 3px solid #e8ecf4;
 }
 
 .right h1 {
-  font-size: 32px;
-  /* était 24px → agrandi */
+  font-size: 32px;        /* était 24px → agrandi */
   color: #1b3a6b;
   font-weight: 900;
   line-height: 1.15;
-  flex: 1;
-  /* prend l'espace restant après le logo */
+  flex: 1;               /* prend l'espace restant après le logo */
 }
 
 .divider {
@@ -1343,7 +1339,7 @@ body {
 /* =============================================
    RTL — carte uniquement (inchangé)
    ============================================= */
-
+  
 [dir="rtl"] .right h1 {
   font-size: 32px;
   text-align: right;
@@ -1373,8 +1369,7 @@ body {
   flex-direction: column;
   align-items: flex-end;
   position: relative;
-  padding: 40px 48px 130px;
-  /* ← REMPLACE padding-bottom seul */
+  padding: 40px 48px 130px; /* ← REMPLACE padding-bottom seul */
 }
 
 [dir="rtl"] .badge {
@@ -1384,8 +1379,7 @@ body {
 
 [dir="rtl"] .title-row {
   display: flex;
-  flex-direction: row;
-  /* logo à gauche, texte à droite en RTL visuel */
+  flex-direction: row;    /* logo à gauche, texte à droite en RTL visuel */
   align-items: center;
   gap: 16px;
   width: 100%;

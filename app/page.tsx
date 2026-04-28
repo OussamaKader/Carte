@@ -283,9 +283,6 @@ export default function Home() {
   };
 
   const exportCard = async () => {
-    const wrapper = document.getElementById('card-export');
-    if (!wrapper) return;
-
     const { error } = await supabase
       .from('etudiants')
       .insert([{ nom: name, numero: number, ville: city }])
@@ -297,7 +294,37 @@ export default function Home() {
       return;
     }
 
-    // Convertir une URL en base64 via canvas
+    // Créer un wrapper temporaire VISIBLE pour la capture
+    const tempWrapper = document.createElement('div');
+    tempWrapper.style.cssText = `
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 1560px;
+    height: 940px;
+    pointer-events: none;
+    z-index: 9999;
+  `;
+    document.body.appendChild(tempWrapper);
+
+    // Créer le contenu de la carte dans ce wrapper
+    const tempCard = document.createElement('div');
+    tempCard.style.cssText = `
+    width: 1560px;
+    height: 940px;
+    background: #dde1e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+    tempWrapper.appendChild(tempCard);
+
+    // Copier le contenu de card-export dans le wrapper temporaire
+    const original = document.getElementById('card-export');
+    if (!original) return;
+    const clone = original.cloneNode(true) as HTMLElement;
+
+    // Injecter la photo en base64 dans le clone
     const toBase64 = (url: string): Promise<string> =>
       new Promise((resolve) => {
         const img = new window.Image();
@@ -309,29 +336,33 @@ export default function Home() {
           canvas.getContext('2d')!.drawImage(img, 0, 0);
           resolve(canvas.toDataURL('image/png'));
         };
-        img.onerror = () => resolve(url); // fallback
+        img.onerror = () => resolve(url);
         img.src = url;
       });
 
-    // Injecter le logo en base64
-    const logoEl = wrapper.querySelector('.logo-right') as HTMLImageElement | null;
+    // Remplacer la photo membre
+    if (photo) {
+      const photoEl = clone.querySelector('.member-photo') as HTMLImageElement | null;
+      if (photoEl) photoEl.src = await toBase64(photo);
+    }
+
+    // Remplacer le logo
+    const logoEl = clone.querySelector('.logo-right') as HTMLImageElement | null;
     if (logoEl) {
       logoEl.src = await toBase64(window.location.origin + '/logo-aem.png');
     }
 
-    // Injecter la photo membre en base64
-    const photoEl = wrapper.querySelector('.member-photo') as HTMLImageElement | null;
-    if (photoEl && photo) {
-      photoEl.src = await toBase64(photo);
-    }
-
+    tempCard.appendChild(clone);
     await document.fonts.ready;
 
-    try {
-      // Premier passage pour forcer le rendu mobile
-      await toPng(wrapper, { pixelRatio: 1, width: 1560, height: 940, skipFonts: true });
+    // Attendre que les images soient rendues
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-      const dataUrl = await toPng(wrapper, {
+    try {
+      // Double passage pour mobile
+      await toPng(tempCard, { pixelRatio: 1, width: 1560, height: 940, skipFonts: true });
+
+      const dataUrl = await toPng(tempCard, {
         pixelRatio: 3,
         width: 1560,
         height: 940,
@@ -345,6 +376,9 @@ export default function Home() {
     } catch (err) {
       console.error('Erreur export:', err);
     }
+
+    // Supprimer le wrapper temporaire
+    document.body.removeChild(tempWrapper);
 
     setName('');
     setNumber('');
