@@ -307,10 +307,25 @@ export default function Home() {
         skipFonts: true,
       });
 
-      const link = document.createElement('a');
-      link.download = 'carte-aem.png';
-      link.href = dataUrl;
-      link.click();
+      // Convertir dataUrl en Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'carte-aem.png', { type: 'image/png' });
+
+      // ✅ Sur mobile : utilise Web Share API pour enregistrer dans la galerie
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Carte AEM',
+        });
+      } else {
+        // Fallback desktop : téléchargement classique
+        const link = document.createElement('a');
+        link.download = 'carte-aem.png';
+        link.href = dataUrl;
+        link.click();
+      }
+
     } catch (err) {
       console.error('Erreur export:', err);
     }
