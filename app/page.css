@@ -1108,9 +1108,52 @@ body {
   border-radius: 28px;
   overflow: hidden;
   display: grid;
+
   grid-template-columns: 34% 66%;
   position: relative;
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.22);
+}
+
+/* ⚡ FIX html2canvas — texte stable */
+.card-inner {
+  font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card-inner * {
+  /* Empêche tout décalage de baseline */
+  vertical-align: baseline;
+}
+
+.card-inner .left {
+  /* Remplacer gap par margin-bottom sur les enfants */
+  gap: 0;
+}
+
+.card-inner .left>*+* {
+  margin-top: 14px;
+}
+
+.card-inner .right {
+  gap: 0;
+}
+
+.card-inner .right>*+* {
+  margin-top: 18px;
+}
+
+/* Fixer les heights des éléments flex pour html2canvas */
+.card-inner .contact-row {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.card-inner .perks {
+  gap: 0;
+}
+
+.card-inner .perks li+li {
+  margin-top: 12px;
 }
 
 .left {
@@ -1321,7 +1364,8 @@ body {
   color: #555;
   font-weight: 700;
   line-height: 2.2;
-  margin-top: auto; /* ← colle les dates juste au-dessus de la wave */
+  margin-top: auto;
+  /* ← colle les dates juste au-dessus de la wave */
 }
 
 
@@ -1376,7 +1420,8 @@ body {
   flex-direction: column;
   align-items: flex-end;
   position: relative;
-  padding: 40px 48px 80px; /* ← même valeur */
+  padding: 40px 48px 80px;
+  /* ← même valeur */
 }
 
 [dir="rtl"] .badge {

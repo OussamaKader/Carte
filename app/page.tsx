@@ -7,6 +7,7 @@ import { supabase } from './supabaseClient';
 import Header from './Header';
 import Footer from './Footer';
 
+
 type Lang = 'fr' | 'ar';
 
 const translations = {
@@ -283,6 +284,7 @@ export default function Home() {
   };
 
   const exportCard = async () => {
+    // 1. Sauvegarder en BDD
     const { error } = await supabase
       .from('etudiants')
       .insert([{ nom: name, numero: number, ville: city }])
@@ -297,6 +299,7 @@ export default function Home() {
     const original = document.getElementById('card-export');
     if (!original) return;
 
+    // 2. Convertir URL → base64
     const urlToBase64 = (url: string): Promise<string> =>
       fetch(url)
         .then(r => r.blob())
@@ -309,7 +312,20 @@ export default function Home() {
         .catch(() => url);
 
     const logoB64 = await urlToBase64(window.location.origin + '/logo-aem.png');
+
+    // 3. ⚡ PRÉCHARGER les polices en base64 dans un <style> injecté
+    const fontUrls = [
+      'https://fonts.gstatic.com/s/plusjakartasans/v8/LDIoaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_KU7NSg.woff2',
+    ];
+
+    const fontBase64s = await Promise.all(fontUrls.map(u => urlToBase64(u).catch(() => '')));
+
+    // 4. Attendre que TOUTES les polices du document soient prêtes
     await document.fonts.ready;
+    // Forcer un reflow
+    document.body.offsetHeight;
+    // Délai pour s'assurer que le rendu est stable
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     try {
       const canvas = await html2canvas(original, {
@@ -321,14 +337,44 @@ export default function Home() {
         scrollY: 0,
         windowWidth: 1560,
         windowHeight: 940,
+        // ⚡ Clé : ignorer les fonts extérieures et utiliser celles déjà chargées
         onclone: async (clonedDoc) => {
           const clonedCard = clonedDoc.getElementById('card-export');
           if (!clonedCard) return;
 
+          // Injecter un style qui force la police en fallback sûr si pas chargée
+          const styleEl = clonedDoc.createElement('style');
+          styleEl.textContent = `
+          * {
+            font-family: 'Plus Jakarta Sans', Arial, sans-serif !important;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
+          }
+          /* Fixer le line-height partout pour éviter le décalage */
+          .card-inner * {
+            line-height: normal;
+          }
+          .card-inner .field { line-height: 1.2; }
+          .card-inner .box { line-height: 1.65; }
+          .card-inner .perks li { line-height: 1.4; }
+          .card-inner .dates { line-height: 2.2; }
+          /* Stabiliser flexbox */
+          .card-inner .left,
+          .card-inner .right {
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .card-inner .contact-row {
+            display: flex !important;
+            align-items: center !important;
+          }
+        `;
+          clonedDoc.head.appendChild(styleEl);
+
           // Logo
           const logoEl = clonedCard.querySelector('.logo-right') as HTMLImageElement | null;
           if (logoEl) {
-            logoEl.src = logoB64; // déjà chargé avant onclone
+            logoEl.src = logoB64;
             logoEl.crossOrigin = 'anonymous';
           }
 
@@ -338,7 +384,7 @@ export default function Home() {
             if (photoEl) photoEl.src = photo;
           }
 
-          // Attendre que les images soient chargées dans le clone
+          // Attendre images dans le clone
           await Promise.all(
             Array.from(clonedCard.querySelectorAll('img')).map(img =>
               img.complete ? Promise.resolve() :
@@ -348,6 +394,9 @@ export default function Home() {
                 })
             )
           );
+
+          // ⚡ Délai supplémentaire pour le rendu dans le clone
+          await new Promise(resolve => setTimeout(resolve, 200));
         },
       });
 
