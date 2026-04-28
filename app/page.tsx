@@ -7,7 +7,6 @@ import { supabase } from './supabaseClient';
 import Header from './Header';
 import Footer from './Footer';
 
-
 type Lang = 'fr' | 'ar';
 
 const translations = {
