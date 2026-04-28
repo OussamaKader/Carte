@@ -31,9 +31,9 @@ const translations = {
     photoText: 'Cliquez pour ajouter une photo',
     removePhoto: ' Supprimer la photo',
     nameLabel: 'Nom complet',
-    namePlaceholder: 'Ex : Oussama Med lemine',
+    namePlaceholder: 'Ex : Mohamed Abdelkader',
     numberLabel: 'Numéro membre',
-    numberPlaceholder: 'Ex : 47185763',
+    numberPlaceholder: 'Ex : 36427169',
     cityLabel: 'Ville',
     download: 'Télécharger ma carte',
     success: ' Carte créée avec succès !',
@@ -75,9 +75,9 @@ const translations = {
     photoText: 'انقر لإضافة صورة',
     removePhoto: ' حذف الصورة',
     nameLabel: 'الاسم الكامل',
-    namePlaceholder: 'مثال: أسامة محمد الأمين',
+    namePlaceholder: 'مثال: محمد عبد القادر',
     numberLabel: 'رقم العضو',
-    numberPlaceholder: 'مثال: 47185763',
+    numberPlaceholder: 'مثال: 36427169',
     cityLabel: 'المدينة',
     download: 'تحميل البطاقة  ',
     success: ' تم إنشاء البطاقة بنجاح!',
@@ -152,7 +152,7 @@ function CardContent({
   name, number, city, photo, lang, logoSrc,
 }: {
   name: string; number: string; city: string;
-  photo: string | null; lang: Lang; logoSrc: string;  
+  photo: string | null; lang: Lang; logoSrc: string;
 }) {
   const t = translations[lang];
   const today = new Date();
@@ -261,6 +261,7 @@ function CardContent({
 }
 
 export default function Home() {
+  const [isExporting, setIsExporting] = useState(false);
   const [lang, setLang] = useState<Lang>('fr');
   const [name, setName] = useState('');
   const [number, setNumber] = useState('');
@@ -298,6 +299,8 @@ export default function Home() {
   };
 
   const exportCard = async () => {
+    setIsExporting(true);  // ← début loading
+
     const { error } = await supabase
       .from('etudiants')
       .insert([{ nom: name, numero: number, ville: city }])
@@ -306,25 +309,23 @@ export default function Home() {
     if (error) {
       console.error('Erreur Supabase:', error);
       alert(t.error);
+      setIsExporting(false);  // ← stop si erreur
       return;
     }
 
     const element = document.getElementById('card-export');
-    if (!element) return;
+    if (!element) { setIsExporting(false); return; }
 
-    // Attendre les fonts
     await document.fonts.ready;
 
     try {
-      // Premier appel ignoré (cache les ressources), second appel propre
-      // Technique recommandée par html-to-image pour éviter les artefacts
       await toPng(element, { pixelRatio: 3, skipFonts: true });
       const dataUrl = await toPng(element, {
         pixelRatio: 3,
         width: 1560,
         height: 940,
         backgroundColor: '#dde1e8',
-        skipFonts: true, 
+        skipFonts: true,
       });
 
       const link = document.createElement('a');
@@ -334,9 +335,11 @@ export default function Home() {
     } catch (err) {
       console.error('Erreur export:', err);
       alert('Erreur lors de la génération. Réessayez.');
+      setIsExporting(false);  // ← stop si erreur
       return;
     }
 
+    setIsExporting(false);  // ← fin loading ✅
     setName('');
     setNumber('');
     setCity(cities[lang][0]);
@@ -472,13 +475,43 @@ export default function Home() {
             ))}
           </select>
 
-          <button onClick={exportCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span>{t.download}</span>
+          <button
+            onClick={exportCard}
+            disabled={isExporting}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              opacity: isExporting ? 0.85 : 1,
+              cursor: isExporting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isExporting ? (
+              <>
+                <svg
+                  width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2.5"
+                  strokeLinecap="round"
+                  style={{ animation: 'spin 0.8s linear infinite' }}
+                >
+                  <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                  <path d="M12 2a10 10 0 0 1 10 10" />
+                </svg>
+                <span>{lang === 'fr' ? 'Génération...' : 'جارٍ الإنشاء...'}</span>
+              </>
+            ) : (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.2"
+                  strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>{t.download}</span>
+              </>
+            )}
           </button>
         </div>
       </section>
@@ -486,7 +519,7 @@ export default function Home() {
       {/* ===== WRAPPER INVISIBLE — 0x0, overflow hidden ===== */}
       <div id="card-export-wrapper">
         <div id="card-export">
-        
+
           <CardContent name={name} number={number} city={city} photo={photo} lang={lang} logoSrc={logoBase64} />
         </div>
       </div>

@@ -1139,7 +1139,7 @@ body {
 }
 
 .card-inner .right>*+* {
-   margin-top: 14px;
+  margin-top: 14px;
 }
 
 /* Fixer les heights des éléments flex pour html2canvas */
@@ -1220,6 +1220,16 @@ body {
 
 .contact-text {
   flex: 1;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .contact-icon {
@@ -1364,7 +1374,7 @@ body {
   color: #555;
   font-weight: 700;
   line-height: 1.8;
-  margin-top: 0 ;
+  margin-top: 0;
   /* ← colle les dates juste au-dessus de la wave */
 }
 
