@@ -1202,7 +1202,7 @@ body {
 }
 
 .right {
-  padding: 40px 48px 90px;
+  padding: 40px 48px 80px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1321,9 +1321,9 @@ body {
   color: #555;
   font-weight: 700;
   line-height: 2.2;
-  margin-top: 16px;
-  /* ← pousse les dates vers le bas */
+  margin-top: auto; /* ← colle les dates juste au-dessus de la wave */
 }
+
 
 .wave-footer {
   position: absolute;
@@ -1376,9 +1376,7 @@ body {
   flex-direction: column;
   align-items: flex-end;
   position: relative;
-  padding: 40px 48px 90px; /* était 130px */
-  /* ← REMPLACE padding-bottom seul */
-   gap: 18px; /* ← ajouter */
+  padding: 40px 48px 80px; /* ← même valeur */
 }
 
 [dir="rtl"] .badge {
