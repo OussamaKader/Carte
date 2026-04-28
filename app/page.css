@@ -1311,11 +1311,13 @@ body {
   background: #1b3a6b;
 }
 
+
 .dates {
   font-size: 14px;
   color: #555;
   font-weight: 700;
   line-height: 2.2;
+  margin-top: auto; /* ← pousse les dates vers le bas */
 }
 
 .wave-footer {
