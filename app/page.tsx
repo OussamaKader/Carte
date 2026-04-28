@@ -292,7 +292,6 @@ export default function Home() {
       .select();
 
     if (error) {
-      console.error('Erreur Supabase:', error);
       alert(t.error);
       return;
     }
@@ -300,43 +299,40 @@ export default function Home() {
     await document.fonts.ready;
 
     try {
-      // ✅ Convertir toutes les images en base64 avant capture
-      const images = wrapper.querySelectorAll('img');
-      await Promise.all(
-        Array.from(images).map(async (img) => {
-          if (img.src.startsWith('data:')) return; // déjà base64
-          try {
-            const res = await fetch(img.src);
-            const blob = await res.blob();
-            const base64 = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-            img.src = base64;
-            await new Promise((r) => { img.onload = r; });
-          } catch { }
-        })
-      );
+      const dataUrl = await toPng(wrapper, {
+        pixelRatio: 2, // ✅ réduit de 3 → 2 pour être plus rapide
+        width: 1560,
+        height: 940,
+        skipFonts: true,
+        cacheBust: true, // ✅ force le rechargement des images
+      });
 
-      // ✅ Générer l'image plusieurs fois pour fiabilité sur mobile
-      let dataUrl = '';
-      for (let i = 0; i < 3; i++) {
-        dataUrl = await toPng(wrapper, {
-          pixelRatio: 3,
-          width: 1560,
-          height: 940,
-          skipFonts: true,
-        });
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'carte-aem.png', { type: 'image/png' });
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if (isIOS) {
+        // ✅ iPhone : Web Share API → "Enregistrer l'image" dans Galerie
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Carte AEM',
+          });
+        } else {
+          // fallback iOS si share non supporté
+          window.open(dataUrl, '_blank');
+        }
+      } else {
+        // ✅ Android + Desktop : téléchargement direct
+        const link = document.createElement('a');
+        link.download = 'carte-aem.png';
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
-
-      // ✅ Desktop : téléchargement direct
-      const link = document.createElement('a');
-      link.download = 'carte-aem.png';
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
 
     } catch (err) {
       console.error('Erreur export:', err);
