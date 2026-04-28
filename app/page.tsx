@@ -300,36 +300,43 @@ export default function Home() {
     await document.fonts.ready;
 
     try {
-      const dataUrl = await toPng(wrapper, {
-        pixelRatio: 3,
-        width: 1560,
-        height: 940,
-        skipFonts: true,
-      });
+      // ✅ Convertir toutes les images en base64 avant capture
+      const images = wrapper.querySelectorAll('img');
+      await Promise.all(
+        Array.from(images).map(async (img) => {
+          if (img.src.startsWith('data:')) return; // déjà base64
+          try {
+            const res = await fetch(img.src);
+            const blob = await res.blob();
+            const base64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            img.src = base64;
+            await new Promise((r) => { img.onload = r; });
+          } catch { }
+        })
+      );
 
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], 'carte-aem.png', { type: 'image/png' });
-
-      // ✅ iOS Safari : Share sheet → "Enregistrer l'image"
-      if (
-        navigator.canShare &&
-        navigator.canShare({ files: [file] })
-      ) {
-        try {
-          await navigator.share({ files: [file], title: 'Carte AEM' });
-        } catch (shareErr) {
-          // L'utilisateur a annulé le partage — pas d'erreur
-        }
-      } else {
-        // Android / Desktop : téléchargement direct
-        const link = document.createElement('a');
-        link.download = 'carte-aem.png';
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      // ✅ Générer l'image plusieurs fois pour fiabilité sur mobile
+      let dataUrl = '';
+      for (let i = 0; i < 3; i++) {
+        dataUrl = await toPng(wrapper, {
+          pixelRatio: 3,
+          width: 1560,
+          height: 940,
+          skipFonts: true,
+        });
       }
+
+      // ✅ Desktop : téléchargement direct
+      const link = document.createElement('a');
+      link.download = 'carte-aem.png';
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
     } catch (err) {
       console.error('Erreur export:', err);
