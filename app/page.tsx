@@ -31,7 +31,7 @@ const translations = {
     photoText: 'Cliquez pour ajouter une photo',
     removePhoto: ' Supprimer la photo',
     nameLabel: 'Nom complet',
-    namePlaceholder: 'Ex : Mohamed Abdelkader',
+    namePlaceholder: 'Ex : Mohamed Abdelkader Tolba',
     numberLabel: 'Numéro membre',
     numberPlaceholder: 'Ex : 36427169',
     cityLabel: 'Ville',
@@ -52,7 +52,7 @@ const translations = {
     labelContact: 'RÉSEAUX & CONTACT',
     issued: 'Émise le',
     expires: "Valable jusqu'au",
-    sgLabel: 'SG ',
+    sgLabel: 'président ',
     dir: 'ltr' as const,
   },
   ar: {
@@ -75,7 +75,7 @@ const translations = {
     photoText: 'انقر لإضافة صورة',
     removePhoto: ' حذف الصورة',
     nameLabel: 'الاسم الكامل',
-    namePlaceholder: 'مثال: محمد عبد القادر',
+    namePlaceholder: 'مثال: محمد عبد القادر طلبه',
     numberLabel: 'رقم العضو',
     numberPlaceholder: 'مثال: 36427169',
     cityLabel: 'المدينة',
@@ -96,7 +96,7 @@ const translations = {
     labelContact: 'التواصل والشبكات',
     issued: 'تاريخ الإصدار',
     expires: 'صالحة إلى غاية',
-    sgLabel: 'SG',
+    sgLabel: 'president ',
     dir: 'rtl' as const,
   },
 };
@@ -108,7 +108,7 @@ const cities = {
 
 // Données des Superviseurs Généraux par ville
 const superviseursGeneraux: Record<string, { nom: string; telephone: string }> = {
-  'Rabat': { nom: 'Mohamed Abdelkader', telephone: '+222 36 42 71 79' },
+  'Rabat': { nom: 'Mohamed Abdelkader Tolba', telephone: '+222 36 42 71 79' },
   'Settat': { nom: 'Cheikh Mohamed Vadel', telephone: '+212 646-848691' },
   'Meknès': { nom: 'El Boukharie', telephone: '+222 27 85 27 09' },
   'Fès': { nom: 'Nouh Zoubier', telephone: '+222 49 69 27 95' },
