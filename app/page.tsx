@@ -52,7 +52,7 @@ const translations = {
     labelContact: 'RÉSEAUX & CONTACT',
     issued: 'Émise le',
     expires: "Valable jusqu'au",
-    sgLabel: 'président ',
+    sgLabel: 'Président ',
     dir: 'ltr' as const,
   },
   ar: {
@@ -96,7 +96,7 @@ const translations = {
     labelContact: 'التواصل والشبكات',
     issued: 'تاريخ الإصدار',
     expires: 'صالحة إلى غاية',
-    sgLabel: 'president ',
+    sgLabel: 'President ',
     dir: 'rtl' as const,
   },
 };
