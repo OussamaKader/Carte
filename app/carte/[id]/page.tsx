@@ -8,22 +8,24 @@ const supabase = createClient(
 export default async function CartePage({ 
   params 
 }: { 
-  params: { id: string } 
+  params: Promise<{ id: string }>
 }) {
-  const { data } = await supabase
+  const { id } = await params;
+
+  const { data, error } = await supabase
     .from('card_requests')
     .select('full_name, card_image_url')
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
-  if (!data?.card_image_url) {
+  if (error || !data?.card_image_url) {
     return (
       <div style={{ 
         display: 'flex', alignItems: 'center', 
         justifyContent: 'center', height: '100vh',
         fontFamily: 'sans-serif', color: '#1b3a6b'
       }}>
-        Carte introuvable
+        Carte introuvable — ID: {id}
       </div>
     );
   }
