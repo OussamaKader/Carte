@@ -362,8 +362,7 @@ export default function AdminPage() {
       return;
     }
 
-    // Lien vers la belle page de carte
-    const cartePageUrl = `https://www.oussamakader.best/carte/${request.id}`;
+    const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
 
     const message = `Bonjour ${request.full_name} 👋\nVoici votre carte de membre AEMM officielle ✅\n\n${cartePageUrl}`;
 
