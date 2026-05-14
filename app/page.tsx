@@ -1,359 +1,191 @@
 ﻿'use client';
 
-
-import { toPng } from 'html-to-image';
 import './page.css';
 import { supabase } from './supabaseClient';
 import Header from './Header';
 import Footer from './Footer';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import { translations, cities } from './CardContent';
 
 type Lang = 'fr' | 'ar';
 
-const translations = {
-  fr: {
-    heroTitle: 'Créez votre carte de membre AEM',
-    heroSubtitle: 'Rejoignez une communauté dynamique d\'étudiants mauritaniens au Maroc. Obtenez votre carte officielle en quelques minutes.',
-    heroCta: 'Créer ma carte',
-    howTitle: 'Comment créer votre carte',
-    step1Title: 'Remplissez vos informations',
-    step1Desc: 'Entrez votre nom, numéro de membre et ville',
-    step2Title: 'Ajoutez votre photo',
-    step2Desc: 'Téléchargez une photo d\'identité claire',
-    step3Title: 'Téléchargez votre carte',
-    step3Desc: 'Générez et téléchargez votre carte officielle',
-    aboutTitle: 'À propos de l\'AEM',
-    aboutDesc1: 'L\'Association des Étudiants Mauritaniens au Maroc (AEM) est une organisation dédiée à l\'accueil, l\'accompagnement et la réussite des étudiants mauritaniens au Maroc.',
-    aboutDesc2: 'Nous créons un réseau solide de solidarité, d\'entraide académique et de développement professionnel pour tous nos membres.',
-    title: 'Carte AEM',
-    subtitle: 'Remplissez les informations pour générer votre carte officielle',
-    photoLabel: 'Photo du membre',
-    photoText: 'Cliquez pour ajouter une photo',
-    removePhoto: ' Supprimer la photo',
-    nameLabel: 'Nom complet',
-    namePlaceholder: 'Ex : Mohamed Abdelkader Tolba',
-    numberLabel: 'Numéro membre',
-    numberPlaceholder: 'Ex : 36427169',
-    cityLabel: 'Ville',
-    download: 'Télécharger ma carte',
-    success: ' Carte créée avec succès !',
-    error: 'Erreur enregistrement',
-    cardBadge: 'CARTE OFFICIELLE',
-    cardTitle1: 'Association des Étudiants',
-    cardTitle2: 'Mauritaniens au Maroc',
-    cardDesc: "Une communauté dédiée à l'accueil, l'accompagnement et la réussite des étudiants mauritaniens au Maroc, au sein d'un réseau solidaire, académique et professionnel.",
-    cardTag: 'Solidarité · Réussite · Excellence',
-    perk1: 'Accès privilégié aux événements, conférences et ateliers',
-    perk2: 'Mise en relation avec des étudiants, diplômés et professionnels',
-    perk3: 'Accompagnement académique, mentorat et soutien personnalisé',
-    labelName: 'NOM DU MEMBRE',
-    labelNumber: 'N° MEMBRE',
-    labelCity: 'VILLE',
-    labelContact: 'RÉSEAUX & CONTACT',
-    issued: 'Émise le',
-    expires: "Valable jusqu'au",
-    sgLabel: 'Président ',
-    dir: 'ltr' as const,
-  },
-  ar: {
-    heroTitle: 'أنشئ بطاقتك العضوية AEM',
-    heroSubtitle: 'انضم إلى مجتمع دينامي من الطلاب الموريتانيين في المغرب. احصل على بطاقتك الرسمية في دقائق.',
-    heroCta: 'إنشاء بطاقتي',
-    howTitle: 'كيفية إنشاء بطاقتك',
-    step1Title: 'أدخل معلوماتك',
-    step1Desc: 'أدخل اسمك ورقم العضوية والمدينة',
-    step2Title: 'أضف صورتك',
-    step2Desc: 'حمّل صورة هوية واضحة',
-    step3Title: 'حمل بطاقتك',
-    step3Desc: 'أنشئ وحمّل بطاقتك الرسمية',
-    aboutTitle: 'عن الجمعية',
-    aboutDesc1: 'جمعية الطلاب الموريتانيين في المغرب (AEM) هي منظمة مكرّسة لاستقبال ومرافقة ودعم نجاح الطلاب الموريتانيين في المغرب.',
-    aboutDesc2: 'نخلق شبكة متينة من التضامن والمساعدة الأكاديمية والتطوير المهني لجميع أعضائنا.',
-    title: 'بطاقة AEM',
-    subtitle: 'أدخل معلوماتك لإنشاء بطاقتك الرسمية',
-    photoLabel: 'صورة العضو',
-    photoText: 'انقر لإضافة صورة',
-    removePhoto: ' حذف الصورة',
-    nameLabel: 'الاسم الكامل',
-    namePlaceholder: 'مثال: محمد عبد القادر طلبه',
-    numberLabel: 'رقم العضو',
-    numberPlaceholder: 'مثال: 36427169',
-    cityLabel: 'المدينة',
-    download: 'تحميل البطاقة  ',
-    success: ' تم إنشاء البطاقة بنجاح!',
-    error: 'خطأ في التسجيل',
-    cardBadge: 'البطاقة الرسمية',
-    cardTitle1: 'جمعية الطلاب الموريتانيين',
-    cardTitle2: 'في المغرب',
-    cardDesc: 'مجتمع مكرّس لاستقبال الطلاب الموريتانيين ومرافقتهم ودعم نجاحهم في المغرب، في إطار شبكة تضامنية أكاديمية ومهنية.',
-    cardTag: 'تضامن · نجاح · تميّز',
-    perk1: 'وصول مميز إلى الفعاليات والمؤتمرات وورش العمل',
-    perk2: 'التواصل مع الطلاب والخريجين والمهنيين',
-    perk3: 'الدعم الأكاديمي والإرشاد والمساندة الشخصية',
-    labelName: 'اسم العضو',
-    labelNumber: 'رقم العضو',
-    labelCity: 'المدينة',
-    labelContact: 'التواصل والشبكات',
-    issued: 'تاريخ الإصدار',
-    expires: 'صالحة إلى غاية',
-    sgLabel: 'President ',
-    dir: 'rtl' as const,
-  },
-};
-
-const cities = {
-  fr: ['Rabat', 'Settat', 'Casablanca', 'Marrakech', 'Fès', 'Oujda', 'Meknès', 'Tanger', 'Kénitra', 'El Jadida', 'Tétouan'],
-  ar: ['الرباط', 'سطات', 'الدار البيضاء', 'مراكش', 'فاس', 'وجدة', 'مكناس', 'طنجة', 'القنيطرة', 'الجديدة', 'تطوان'],
-};
-
-// Données des Superviseurs Généraux par ville
-const superviseursGeneraux: Record<string, { nom: string; telephone: string }> = {
-  'Rabat': { nom: 'Mohamed Abdelkader Tolba', telephone: '+222 36 42 71 79' },
-  'Settat': { nom: 'Cheikh Mohamed Vadel', telephone: '+212 646-848691' },
-  'Meknès': { nom: 'El Boukharie', telephone: '+222 27 85 27 09' },
-  'Fès': { nom: 'Nouh Zoubier', telephone: '+222 49 69 27 95' },
-  'Kénitra': { nom: 'Cheikhna', telephone: '+222 38 32 05 32' },
-  'El Jadida': { nom: 'Ali Cheikh', telephone: '+222 48 86 01 90' },
-  'Marrakech': { nom: 'Yebe Ebnou', telephone: '+212 64 28 10 31' },
-  'Tétouan': { nom: 'Mohamed Salem', telephone: '+212 62 18 87 48' },
-  'Tanger': { nom: 'Boubacar Diagne', telephone: '+222 48 98 41 27' },
-  'Casablanca': { nom: 'Abdoullah Diallo', telephone: '+222 47 98 41 27' },
-  'Oujda': { nom: 'Hassen', telephone: '+222 43 82 17 88' },
-};
-const cityArToFr: Record<string, string> = {
-  'الرباط': 'Rabat',
-  'سطات': 'Settat',
-  'مكناس': 'Meknès',
-  'فاس': 'Fès',
-  'القنيطرة': 'Kénitra',
-  'الجديدة': 'El Jadida',
-  'مراكش': 'Marrakech',
-  'تطوان': 'Tétouan',
-  'طنجة': 'Tanger',
-  'الدار البيضاء': 'Casablanca',
-  'وجدة': 'Oujda',
-};
-
-// Fonction pour obtenir le SG d'une ville
-function getSuperviseurGeneral(ville: string): { nom: string; telephone: string } | null {
-  const villeFr = cityArToFr[ville] || ville;
-  return superviseursGeneraux[villeFr] || null;
-}
-
-const Wave = () => (
-  <svg viewBox="0 0 720 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0,12 Q180,46 360,20 Q540,0 720,28 L720,60 L0,60 Z" fill="#0d2a5e" />
-    <path d="M0,24 Q180,56 360,32 Q540,10 720,40 L720,60 L0,60 Z" fill="#c8102e" opacity="0.85" />
-    <path d="M0,36 Q180,64 360,44 Q540,22 720,52 L720,60 L0,60 Z" fill="#00843D" opacity="0.8" />
-  </svg>
-);
-
-function CardContent({
-  name, number, city, photo, lang, logoSrc,
-}: {
-  name: string; number: string; city: string;
-  photo: string | null; lang: Lang; logoSrc: string;
-}) {
-  const t = translations[lang];
-  const today = new Date();
-  const fmt = (d: Date) =>
-    d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const issued = fmt(today);
-  const next = new Date(today);
-  next.setFullYear(next.getFullYear() + 1);
-  const expire = fmt(next);
-
-  // Obtenir les informations du Superviseur Général pour cette ville
-  const sg = getSuperviseurGeneral(city);
-
-  return (
-    <div className="card-inner" dir={t.dir}>
-
-      {/* ===== PANNEAU BLEU ===== */}
-      <div className="left">
-        <div className="photo-wrap">
-          {photo ? (
-            <img src={photo} className="member-photo" alt="Photo membre" />
-          ) : (
-            <div className="member-photo-placeholder">
-              <svg viewBox="0 0 24 24" width="50" height="50" fill="rgba(255,255,255,0.4)">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-              </svg>
-            </div>
-          )}
-        </div>
-
-        <div className="label">{t.labelName}</div>
-        <div className="field">{name || '—'}</div>
-
-        <div className="label">{t.labelNumber}</div>
-        <div className="field">{number || '—'}</div>
-
-        <div className="label">{t.labelCity}</div>
-        <div className="field">{city}</div>
-
-        <div className="label">{t.labelContact}</div>
-        {sg && (
-          <div className="contact-row">
-            <div className="contact-icon sg">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-              </svg>
-            </div>
-            <span className="contact-text">{t.sgLabel}: {sg.nom}</span>
-          </div>
-        )}
-
-
-        <div className="contact-row">
-          <div className="contact-icon wa">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.742.951.996-3.624-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
-            </svg>
-          </div>
-          <span className="contact-text">{sg ? sg.telephone : '+222 36 42 71 79'}</span>
-        </div>
-
-        <div className="contact-row">
-          <div className="contact-icon fb">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-            </svg>
-          </div>
-          <span className="contact-text">AEM-MAROC</span>
-        </div>
-
-
-      </div>
-
-      {/* ===== PANNEAU BLANC ===== */}
-      <div className="right">
-        <div className="badge">{t.cardBadge}</div>
-
-        <div className="title-row">
-          <img src="/logo-aem.png" className="logo-right" alt="AEM" />
-          <h1>{t.cardTitle1}<br />{t.cardTitle2}</h1>
-        </div>
-
-        <div className="divider" />
-        <div className="box">{t.cardDesc}</div>
-        <div className="tag">{t.cardTag}</div>
-
-        <ul className="perks">
-          <li><span className="perk-dot red" />{t.perk1}</li>
-          <li><span className="perk-dot green" />{t.perk2}</li>
-          <li><span className="perk-dot blue" />{t.perk3}</li>
-        </ul>
-
-        <div className="dates">
-          {t.issued} : {issued}<br />
-          {t.expires} : {expire}
-        </div>
-      </div>
-
-      {/* ===== WAVE FOOTER ===== */}
-      <div className="wave-footer">
-        <Wave />
-      </div>
-
-    </div>
-  );
-}
-
 export default function Home() {
-  const [isExporting, setIsExporting] = useState(false);
   const [lang, setLang] = useState<Lang>('fr');
   const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
   const [city, setCity] = useState(cities.fr[0]);
+  const [whatsapp, setWhatsapp] = useState('');
+  const [dialCode, setDialCode] = useState<'+222' | '+212'>('+222');
+
+  // Photo profil
   const [photo, setPhoto] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [logoBase64, setLogoBase64] = useState<string>('/logo-aem.png');
-  useEffect(() => {
-    fetch('/logo-aem.png')
-      .then(r => r.blob())
-      .then(blob => new Promise<string>((res, rej) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result as string);
-        reader.onerror = rej;
-        reader.readAsDataURL(blob);
-      }))
-      .then(setLogoBase64)
-      .catch(() => { }); // fallback silencieux → garde l'URL originale
-  }, []);
+
+  // Capture paiement
+  const [payment, setPayment] = useState<string | null>(null);
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const paymentInputRef = useRef<HTMLInputElement>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  // ── Erreurs inline ──────────────────────────────────────────
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const t = translations[lang];
 
   const switchLang = (newLang: Lang) => {
     setLang(newLang);
     setCity(cities[newLang][0]);
+    setErrors({});
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPhotoFile(file);
     const reader = new FileReader();
     reader.onload = () => setPhoto(reader.result as string);
     reader.readAsDataURL(file);
+    setErrors((prev) => ({ ...prev, photo: '' }));
   };
 
-  const exportCard = async () => {
-    setIsExporting(true);  // ← début loading
+  const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPaymentFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPayment(reader.result as string);
+    reader.readAsDataURL(file);
+    setErrors((prev) => ({ ...prev, payment: '' }));
+  };
 
-    const { error } = await supabase
-      .from('etudiants')
-      .insert([{ nom: name, numero: number, ville: city }])
-      .select();
+  // ── Validation ──────────────────────────────────────────────
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    const isFr = lang === 'fr';
 
-    if (error) {
-      console.error('Erreur Supabase:', error);
-      alert(t.error);
-      setIsExporting(false);  // ← stop si erreur
-      return;
+    if (!photoFile) {
+      errs.photo = isFr ? 'La photo est requise.' : 'الصورة مطلوبة.';
     }
 
-    const element = document.getElementById('card-export');
-    if (!element) { setIsExporting(false); return; }
+    if (!name.trim()) {
+      errs.name = isFr ? 'Le nom est requis.' : 'الاسم مطلوب.';
+    } else if (/\d/.test(name)) {
+      errs.name = isFr ? 'Le nom ne doit pas contenir de chiffres.' : 'لا يجب أن يحتوي الاسم على أرقام.';
+    }
 
-    await document.fonts.ready;
+    if (!whatsapp.trim()) {
+      errs.whatsapp = isFr ? 'Le numéro WhatsApp est requis.' : 'رقم واتساب مطلوب.';
+    } else if (!/^[\d\s]+$/.test(whatsapp)) {
+      errs.whatsapp = isFr ? 'Numéro invalide (chiffres uniquement).' : 'رقم غير صالح (أرقام فقط).';
+    }
+
+    if (!paymentFile) {
+      errs.payment = isFr ? 'La capture de paiement est requise.' : 'صورة الدفع مطلوبة.';
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  // ── Upload ──────────────────────────────────────────────────
+  const uploadFile = async (file: File, path: string): Promise<string> => {
+    const { error } = await supabase.storage
+      .from('card-requests')
+      .upload(path, file, { contentType: file.type, upsert: true });
+    if (error) throw error;
+    const { data } = supabase.storage.from('card-requests').getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  // ── Submit ──────────────────────────────────────────────────
+  const submitRequest = async () => {
+    if (!validate()) return;
+
+    setIsSubmitting(true);
 
     try {
-      await toPng(element, { pixelRatio: 3, skipFonts: true });
-      const dataUrl = await toPng(element, {
-        pixelRatio: 3,
-        width: 1560,
-        height: 940,
-        backgroundColor: '#dde1e8',
-        skipFonts: true,
-      });
+      const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      const link = document.createElement('a');
-      link.download = 'carte-aem.png';
-      link.href = dataUrl;
-      link.click();
+      const [profileUrl, paymentUrl] = await Promise.all([
+        uploadFile(photoFile!, `profiles/${uid}-${photoFile!.name}`),
+        uploadFile(paymentFile!, `payments/${uid}-${paymentFile!.name}`),
+      ]);
+
+      const { error } = await supabase.from('card_requests').insert([
+        {
+          full_name: name.trim(),
+          city,
+          lang,
+          whatsapp_number: `${dialCode}${whatsapp.trim().replace(/\s/g, '')}`,
+          profile_image_url: profileUrl,
+          payment_screenshot_url: paymentUrl,
+        },
+      ]);
+
+      if (error) throw error;
+
+      // Reset
+      setName('');
+      setCity(cities[lang][0]);
+      setWhatsapp('');
+      setPhoto(null);
+      setPhotoFile(null);
+      setPayment(null);
+      setPaymentFile(null);
+      setErrors({});
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (paymentInputRef.current) paymentInputRef.current.value = '';
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
-      console.error('Erreur export:', err);
-      alert('Erreur lors de la génération. Réessayez.');
-      setIsExporting(false);  // ← stop si erreur
-      return;
+      console.error(err);
+      alert(t.error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsExporting(false);  // ← fin loading ✅
-    setName('');
-    setNumber('');
-    setCity(cities[lang][0]);
-    setPhoto(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
   };
+
+  // ── Style partagé pour les messages d'erreur ────────────────
+  const errStyle: React.CSSProperties = {
+    color: '#c8102e',
+    fontSize: 11,
+    fontWeight: 600,
+    marginTop: -6,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+  };
+
+  // ── Style partagé pour le bouton X ──────────────────────────
+  const xBtnStyle = (side: 'left' | 'right'): React.CSSProperties => ({
+    position: 'absolute',
+    top: -8,
+    [side]: -8,
+    width: 22,
+    height: 22,
+    borderRadius: '50%',
+    background: '#c8102e',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+    zIndex: 10,
+  });
 
   return (
     <div className="app-container" dir={t.dir}>
       <Header lang={lang} onSwitchLang={switchLang} />
 
-      {/* ===== HERO SECTION ===== */}
+      {/* ===== HERO ===== */}
       <section className="hero-section" id="hero">
         <div className="hero-content">
           <h1 className="hero-title">{t.heroTitle}</h1>
@@ -367,11 +199,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== HOW IT WORKS SECTION ===== */}
+      {/* ===== HOW IT WORKS ===== */}
       <section className="how-section" id="how">
         <h2 className="section-title">{t.howTitle}</h2>
         <div className="steps-grid">
-          {/* Step 1 */}
           <div className="step-card" data-step="1">
             <div className="step-icon-wrap blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -397,9 +228,8 @@ export default function Home() {
           <div className="step-card" data-step="3">
             <div className="step-icon-wrap green">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
             </div>
             <h3>{t.step3Title}</h3>
@@ -408,7 +238,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== ABOUT SECTION ===== */}
+      {/* ===== ABOUT ===== */}
       <section className="about-section" id="about">
         <h2 className="section-title">{t.aboutTitle}</h2>
         <div className="about-content">
@@ -417,16 +247,37 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== FORM SECTION ===== */}
+      {/* ===== FORM ===== */}
       <section className="form-section" id="form">
         <div className="form">
           <h2>{t.title}</h2>
           <p className="subtitle">{t.subtitle}</p>
 
+          {/* ── Photo profil ────────────────────────────────── */}
           <label>{t.photoLabel}</label>
-          <div className="photo-upload" onClick={() => fileInputRef.current?.click()}>
+          <div
+            className="photo-upload"
+            style={{ borderColor: errors.photo ? '#c8102e' : undefined }}
+            onClick={() => !photo && fileInputRef.current?.click()}
+          >
             {photo ? (
-              <img src={photo} className="photo-preview" alt="preview" />
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <img src={photo} className="photo-preview" alt="preview" />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhoto(null);
+                    setPhotoFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = ''; // ← ajouter
+                  }}
+
+
+                  style={xBtnStyle(lang === 'ar' ? 'left' : 'right')}
+                  title="Supprimer"
+                >
+                  ×
+                </button>
+              </div>
             ) : (
               <>
                 <span className="photo-upload-icon">
@@ -446,68 +297,139 @@ export default function Home() {
             style={{ display: 'none' }}
             onChange={handlePhotoChange}
           />
-          {photo && (
-            <button className="btn-remove-photo" onClick={() => setPhoto(null)}>
-              {t.removePhoto}
-            </button>
-          )}
+          {errors.photo && <span style={errStyle}>⚠ {errors.photo}</span>}
 
-          {success && <div className="toast">{t.success}</div>}
-
+          {/* ── Nom ─────────────────────────────────────────── */}
           <label>{t.nameLabel}</label>
           <input
             placeholder={t.namePlaceholder}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            style={{ borderColor: errors.name ? '#c8102e' : undefined }}
+            onChange={(e) => {
+              // Interdit les chiffres dans le nom
+              const val = e.target.value.replace(/[0-9]/g, '');
+              setName(val);
+              setErrors((prev) => ({ ...prev, name: '' }));
+            }}
           />
+          {errors.name && <span style={errStyle}>⚠ {errors.name}</span>}
 
-          <label>{t.numberLabel}</label>
-          <input
-            placeholder={t.numberPlaceholder}
-            value={number}
-            onChange={(e) => setNumber(e.target.value)}
-          />
-
+          {/* ── Ville ───────────────────────────────────────── */}
           <label>{t.cityLabel}</label>
           <select value={city} onChange={(e) => setCity(e.target.value)}>
-            {cities[lang].map((c) => (
-              <option key={c}>{c}</option>
-            ))}
+            {cities[lang].map((c) => <option key={c}>{c}</option>)}
           </select>
 
+          {/* ── WhatsApp avec indicatif ──────────────────────── */}
+          <label>{t.whatsappLabel}</label>
+          <div style={{ display: 'flex', gap: 8, direction: 'ltr' }}>
+            <select
+              value={dialCode}
+              onChange={(e) => setDialCode(e.target.value as '+222' | '+212')}
+              style={{ width: 'auto', flexShrink: 0, fontWeight: 700, direction: 'ltr' }}
+            >
+              <option value="+222">🇲🇷 +222</option>
+              <option value="+212">🇲🇦 +212</option>
+            </select>
+            <input
+              placeholder="36 42 71 79"
+              value={whatsapp}
+              style={{
+                flex: 1,
+                borderColor: errors.whatsapp ? '#c8102e' : undefined,
+                textAlign: 'left',
+              }}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9\s]/g, '');
+                setWhatsapp(val);
+                setErrors((prev) => ({ ...prev, whatsapp: '' }));
+              }}
+              type="tel"
+              dir="ltr"
+            />
+          </div>
+          {errors.whatsapp && <span style={errStyle}>⚠ {errors.whatsapp}</span>}
+
+          {/* ── Capture paiement ─────────────────────────────── */}
+          <label>{t.paymentLabel}</label>
+          <div
+            className="photo-upload"
+            onClick={() => !payment && paymentInputRef.current?.click()}
+            style={{
+              borderColor: errors.payment ? '#c8102e' : payment ? '#00713a' : undefined,
+            }}
+          >
+            {payment ? (
+              <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+                <img
+                  src={payment}
+                  alt="payment"
+                  style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 8, objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPayment(null);
+                    setPaymentFile(null);
+                    if (paymentInputRef.current) paymentInputRef.current.value = ''; // ← ajouter
+                  }}
+                  style={xBtnStyle(lang === 'ar' ? 'left' : 'right')}
+                  title="Supprimer"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="photo-upload-icon">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#8899bb" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                </span>
+                <span className="photo-upload-text">{t.paymentText}</span>
+              </>
+            )}
+          </div>
+          <input
+            ref={paymentInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handlePaymentChange}
+          />
+          {errors.payment && <span style={errStyle}>⚠ {errors.payment}</span>}
+
+          {/* ── Bouton submit ────────────────────────────────── */}
           <button
-            onClick={exportCard}
-            disabled={isExporting}
+            onClick={submitRequest}
+            disabled={isSubmitting}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              opacity: isExporting ? 0.85 : 1,
-              cursor: isExporting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.85 : 1,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
             }}
           >
-            {isExporting ? (
+            {isSubmitting ? (
               <>
                 <svg
                   width="16" height="16" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" strokeWidth="2.5"
-                  strokeLinecap="round"
+                  fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
                   style={{ animation: 'spin 0.8s linear infinite' }}
                 >
                   <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
                   <path d="M12 2a10 10 0 0 1 10 10" />
                 </svg>
-                <span>{lang === 'fr' ? 'Génération...' : 'جارٍ الإنشاء...'}</span>
+                <span>{lang === 'fr' ? 'Envoi en cours...' : 'جارٍ الإرسال...'}</span>
               </>
             ) : (
               <>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2.2"
-                  strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
                 <span>{t.download}</span>
               </>
@@ -516,16 +438,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== WRAPPER INVISIBLE — 0x0, overflow hidden ===== */}
-      <div id="card-export-wrapper">
-        <div id="card-export">
-
-          <CardContent name={name} number={number} city={city} photo={photo} lang={lang} logoSrc={logoBase64} />
+      {/* ── Toast fixe en bas (visible sans scroller) ──────── */}
+      {success && (
+        <div className="toast-fixed">
+          <span>{t.success}</span>
+          <span style={{ fontSize: 12, opacity: 0.85 }}>{t.successDesc}</span>
         </div>
-      </div>
+      )}
 
       <Footer lang={lang} />
-
     </div>
   );
 }

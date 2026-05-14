@@ -336,7 +336,7 @@ body {
 .hero-section {
   position: relative;
   background: var(--navy);
-  margin-top: 70px;
+  margin-top: 0px;
   min-height: clamp(500px, 75vh, 740px);
   display: flex;
   align-items: center;
@@ -1417,12 +1417,14 @@ body {
   direction: rtl;
 }
 
-[dir="rtl"] .card-inner {
+.card-inner[dir="rtl"] {
   direction: ltr;
   grid-template-columns: 66% 34%;
 }
 
 [dir="rtl"] .right {
+  grid-column: 1;   /* ✅ panneau blanc → colonne gauche */
+  grid-row: 1;
   order: 1;
   direction: rtl;
   text-align: right;
@@ -1431,7 +1433,6 @@ body {
   align-items: flex-end;
   position: relative;
   padding: 40px 48px 80px;
-  /* ← même valeur */
 }
 
 [dir="rtl"] .badge {
@@ -1484,6 +1485,8 @@ body {
 }
 
 [dir="rtl"] .left {
+  grid-column: 2;   /* ✅ panneau bleu → colonne droite */
+  grid-row: 1;
   order: 2;
   direction: ltr;
   text-align: right;
@@ -1527,4 +1530,33 @@ body {
 [dir="rtl"] select {
   direction: rtl;
   text-align: right;
+}
+
+
+.toast-fixed {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #16a34a;
+  color: white;
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+  min-width: 280px;
+  max-width: 90vw;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
