@@ -5,75 +5,162 @@ const supabase = createClient(
   'sb_publishable_WpIlZdCOwCAbzR7bOKeNHA_dAuzPNzY'
 );
 
-export default async function CartePage({ 
-  params 
-}: { 
+export default async function CartePage({
+  params
+}: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params;
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('card_requests')
     .select('full_name, card_image_url')
     .eq('id', id)
     .single();
 
-  if (error || !data?.card_image_url) {
+  if (!data?.card_image_url) {
     return (
-      <div style={{ 
-        display: 'flex', alignItems: 'center', 
+      <div style={{
+        display: 'flex', alignItems: 'center',
         justifyContent: 'center', height: '100vh',
-        fontFamily: 'sans-serif', color: '#1b3a6b'
+        fontFamily: 'sans-serif', color: '#1b3a6b',
+        background: '#dde1e8',
       }}>
-        Carte introuvable — ID: {id}
+        Carte introuvable
       </div>
     );
   }
 
   return (
-    <div style={{
-      background: '#dde1e8',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      fontFamily: 'sans-serif',
-      gap: '20px',
-    }}>
-      <p style={{ color: '#1b3a6b', fontWeight: 600, fontSize: 16, margin: 0 }}>
-        Carte de membre AEMM — {data.full_name}
-      </p>
+    <>
+      <style>{`
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-      <img
-        src={data.card_image_url}
-        alt={`Carte ${data.full_name}`}
-        style={{
-          width: '100%',
-          maxWidth: '900px',
-          borderRadius: '16px',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.15)',
-        }}
-      />
+        body {
+          background: linear-gradient(135deg, #1b3a6b 0%, #0d2a5e 50%, #1b3a6b 100%);
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 32px 16px;
+          font-family: 'Segoe UI', sans-serif;
+        }
 
-      <a
-        href={data.card_image_url}
-        download={`carte-AEMM-${data.full_name}.png`}
-        target="_blank"
-        rel="noreferrer"
-        style={{
-          background: '#1b3a6b',
-          color: 'white',
-          padding: '12px 28px',
-          borderRadius: '10px',
-          textDecoration: 'none',
-          fontSize: '14px',
-          fontWeight: 500,
-        }}
-      >
-        ⬇ Télécharger ma carte
-      </a>
-    </div>
+        .wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 24px;
+          width: 100%;
+          max-width: 960px;
+        }
+
+        .header {
+          text-align: center;
+        }
+
+        .header .badge {
+          display: inline-block;
+          background: rgba(255,255,255,0.15);
+          color: rgba(255,255,255,0.9);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          padding: 6px 16px;
+          border-radius: 100px;
+          margin-bottom: 12px;
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .header h1 {
+          color: white;
+          font-size: 22px;
+          font-weight: 700;
+          margin-bottom: 4px;
+        }
+
+        .header p {
+          color: rgba(255,255,255,0.6);
+          font-size: 13px;
+        }
+
+        .card-wrap {
+          width: 100%;
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+        }
+
+        .card-wrap img {
+          width: 100%;
+          height: auto;
+          display: block;
+          image-rendering: -webkit-optimize-contrast;
+          image-rendering: crisp-edges;
+        }
+
+        .btn-download {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          background: #25d366;
+          color: white;
+          padding: 14px 32px;
+          border-radius: 14px;
+          text-decoration: none;
+          font-size: 15px;
+          font-weight: 600;
+          box-shadow: 0 8px 24px rgba(37,211,102,0.35);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-download:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px rgba(37,211,102,0.45);
+        }
+
+        .footer-text {
+          color: rgba(255,255,255,0.4);
+          font-size: 12px;
+          text-align: center;
+        }
+      `}</style>
+
+      <div className="wrap">
+        <div className="header">
+          <div className="badge">AEMM — Carte Officielle</div>
+          <h1>{data.full_name}</h1>
+          <p>Association des Étudiants Mauritaniens au Maroc</p>
+        </div>
+
+        <div className="card-wrap">
+          <img
+            src={`${data.card_image_url}?quality=100`}
+            alt={`Carte ${data.full_name}`}
+          />
+        </div>
+
+        <a
+          href={data.card_image_url}
+          download={`carte-AEMM-${data.full_name}.png`}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-download"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Télécharger ma carte
+        </a>
+
+        <p className="footer-text">
+          Cette carte est officielle et générée par l'AEMM
+        </p>
+      </div>
+    </>
   );
 }
