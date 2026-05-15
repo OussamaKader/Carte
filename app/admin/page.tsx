@@ -347,25 +347,17 @@ export default function AdminPage() {
     const num = request.whatsapp_number.replace(/[\s\-\(\)\+]/g, '');
 
     if (!request.card_image_url && !localCardUrls[request.id]) {
-      alert("Générez la carte d'abord.");
+      alert('Générez la carte d\'abord.');
       return;
     }
 
     const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
 
-    const message =
-      request.lang === 'ar'
-        ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${cartePageUrl}`
-        : `Bonjour ${request.full_name}\nVoici votre carte de membre AEMM officielle\n\n${cartePageUrl}`;
+    const message = request.lang === 'ar'
+      ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${cartePageUrl}`
+      : `Bonjour ${request.full_name}\nVoici votre carte de membre AEMM officielle\n\n${cartePageUrl}`;
 
-    // ✅ Remplace window.open par un <a> click — jamais bloqué
-    const a = document.createElement('a');
-    a.href = `https://wa.me/${num}?text=${encodeURIComponent(message)}`;
-    a.target = '_blank';
-    a.rel = 'noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
   };
   // ─────────────────────────────────────────────────────────────────────────
   const filtered = filter === 'all' ? requests : requests.filter((r) => r.status === filter);
@@ -593,7 +585,7 @@ export default function AdminPage() {
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      Approuver
+                      Approuver 
                     </>
                   )}
                 </button>
