@@ -343,7 +343,7 @@ export default function AdminPage() {
   };
 
   // ── WHATSAPP — envoie le lien PDF ─────────────────────────────────────────
-  const openWhatsApp = async (request: CardRequest) => {
+  const openWhatsApp = (request: CardRequest) => {
     const num = request.whatsapp_number.replace(/[\s\-\(\)\+]/g, '');
 
     if (!request.card_image_url && !localCardUrls[request.id]) {
@@ -351,22 +351,11 @@ export default function AdminPage() {
       return;
     }
 
-    // URL directe vers la page carte
     const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
 
-    // Raccourcir avec TinyURL
-    let shortUrl = cartePageUrl;
-    try {
-      const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(cartePageUrl)}`);
-      const text = await res.text();
-      if (text.startsWith('https://')) shortUrl = text.trim();
-    } catch {
-      shortUrl = cartePageUrl;
-    }
-
     const message = request.lang === 'ar'
-      ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${shortUrl}`
-      : `Bonjour ${request.full_name}\nVoici votre carte de membre AEMM officielle\n\n${shortUrl}`;
+      ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${cartePageUrl}`
+      : `Bonjour ${request.full_name}\nVoici votre carte de membre AEMM officielle\n\n${cartePageUrl}`;
 
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
   };
