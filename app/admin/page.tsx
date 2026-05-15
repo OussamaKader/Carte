@@ -248,7 +248,6 @@ export default function AdminPage() {
     }
     setGeneratingId(request.id);
 
-    // Charger la photo en base64
     let photoB64: string | null = null;
     try {
       const res = await fetch(request.profile_image_url);
@@ -272,29 +271,24 @@ export default function AdminPage() {
     await document.fonts.ready;
 
     try {
-      // Premier rendu pour "chauffer" les fonts
-      await toPng(element, { pixelRatio: 3, skipFonts: true });
+      // Chauffe les fonts
+      await toPng(element, { pixelRatio: 4, skipFonts: true });
 
-      // Rendu final HD
+      // Rendu final haute qualité
       const dataUrl = await toPng(element, {
-        pixelRatio: 3,
+        pixelRatio: 4,          // ← augmenté de 3 à 4
         width: 1560,
         height: 940,
         backgroundColor: '#dde1e8',
         skipFonts: true,
       });
 
-      // Télécharger PNG localement
-      const link = document.createElement('a');
-      link.download = `carte-${request.full_name.replace(/\s+/g, '-')}.png`;
-      link.href = dataUrl;
-      link.click();
+      // ❌ Supprimé : plus de téléchargement automatique
+      // ✅ Juste upload + approbation
 
       let pngUrl: string | null = null;
-      let pdfUrl: string | null = null;
 
       try {
-        // Upload PNG
         const res2 = await fetch(dataUrl);
         const blob2 = await res2.blob();
         const cardPath = `cards/${request.id}.png`;
@@ -306,9 +300,6 @@ export default function AdminPage() {
           .getPublicUrl(cardPath);
         pngUrl = pu;
 
-
-
-        // Sauvegarder dans Supabase
         await supabase!
           .from('card_requests')
           .update({
@@ -317,29 +308,27 @@ export default function AdminPage() {
           })
           .eq('id', request.id);
 
+        showToast('Carte approuvée et generee');
+
       } catch (uploadErr) {
         console.error('Upload error:', uploadErr);
         await supabase!
           .from('card_requests')
           .update({ status: 'approved' })
           .eq('id', request.id);
-      }
-
-      // Mise à jour locale — on stocke le PDF URL pour WhatsApp
-      if (pdfUrl) {
-        setLocalCardUrls((prev) => ({ ...prev, [request.id]: pdfUrl! }));
+        showToast('Approuvée mais erreur upload');
       }
 
       setRequests((prev) =>
         prev.map((r) =>
           r.id === request.id
-            ? { ...r, status: 'approved', card_image_url: pngUrl ?? r.card_image_url, }
+            ? { ...r, status: 'approved', card_image_url: pngUrl ?? r.card_image_url }
             : r
         )
       );
       setSelected((prev) =>
         prev && prev.id === request.id
-          ? { ...prev, status: 'approved', card_image_url: pngUrl ?? prev.card_image_url, }
+          ? { ...prev, status: 'approved', card_image_url: pngUrl ?? prev.card_image_url }
           : prev
       );
 
