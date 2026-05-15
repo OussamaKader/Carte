@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Carte AEMM",
     description: "Obtenez votre carte officielle de membre AEMM",
-    url: "https://www.oussamakader.best",
+    url: "https://www.aem-maroc.org",
     siteName: "AEMM Carte",
     images: [{ url: "/og-image.svg", width: 800, height: 800 }],
     locale: "fr_FR",

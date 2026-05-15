@@ -31,8 +31,6 @@ const showToast = (msg: string) => {
   setTimeout(() => el.remove(), 4000);
 };
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'aem-admin-2026';
-
 type Lang = 'fr' | 'ar';
 type Status = 'pending' | 'approved' | 'rejected';
 
@@ -63,11 +61,18 @@ function AuthGate({ onAuth }: { onAuth: () => void }) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const tryLogin = () => {
+  const tryLogin = async () => {
     if (!pwd.trim()) return;
     setLoading(true);
-    setTimeout(() => {
-      if (pwd === ADMIN_PASSWORD) {
+    
+    try {
+      const res = await fetch('/api/auth/verify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd }),
+      });
+
+      if (res.ok) {
         sessionStorage.setItem('aem_admin', '1');
         onAuth();
       } else {
@@ -75,7 +80,12 @@ function AuthGate({ onAuth }: { onAuth: () => void }) {
         setLoading(false);
         setTimeout(() => setError(false), 1800);
       }
-    }, 400);
+    } catch (err) {
+      console.error('Erreur connexion:', err);
+      setError(true);
+      setLoading(false);
+      setTimeout(() => setError(false), 1800);
+    }
   };
 
   return (
@@ -351,7 +361,7 @@ export default function AdminPage() {
       return;
     }
 
-    const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
+    const cartePageUrl = `https://aem-maroc.org/carte/${request.id}`;
 
     const message = request.lang === 'ar'
       ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${cartePageUrl}`
