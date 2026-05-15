@@ -585,7 +585,7 @@ export default function AdminPage() {
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      Approuver &amp; Générer
+                      Approuver 
                     </>
                   )}
                 </button>
