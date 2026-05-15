@@ -354,22 +354,23 @@ export default function AdminPage() {
   };
 
   // ── WHATSAPP — envoie le lien PDF ─────────────────────────────────────────
-  const openWhatsApp = (request: CardRequest) => {
-    const num = request.whatsapp_number.replace(/[\s\-\(\)\+]/g, '');
+const openWhatsApp = (request: CardRequest) => {
+  const num = request.whatsapp_number.replace(/[\s\-\(\)\+]/g, '');
 
-    if (!request.card_image_url && !localCardUrls[request.id]) {
-      alert('Générez la carte d\'abord.');
-      return;
-    }
+  if (!request.card_image_url && !localCardUrls[request.id]) {
+    alert('Générez la carte d\'abord.');
+    return;
+  }
 
-    const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
+  // URL réelle sans # pour que le lien fonctionne
+  const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
 
-    const message = request.lang === 'ar'
-      ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${cartePageUrl}`
-      : `Bonjour ${request.full_name}\nVoici votre carte de membre AEMM officielle\n\n${cartePageUrl}`;
+  const message = request.lang === 'ar'
+    ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${cartePageUrl}`
+    : `Bonjour ${request.full_name}\nVoici votre carte de membre AEMM officielle\n\n${cartePageUrl}`;
 
-    window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
-  };
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
+};
   // ─────────────────────────────────────────────────────────────────────────
   const filtered = filter === 'all' ? requests : requests.filter((r) => r.status === filter);
 
