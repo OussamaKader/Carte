@@ -62,16 +62,8 @@ export default function Footer({ lang = 'fr' }: FooterProps) {
           </div>
 
           {/* Mauritanian tricolor bar */}
-          {/* Mauritanian tricolor bar avec logo centré */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            margin: '12px 0',
-          }}>
-            <div style={{ flex: 1, height: '3px', background: '#c8102e' }} />
-            <div style={{ flex: 1, height: '3px', background: '#f0c000' }} />
-            <div style={{ flex: 1, height: '3px', background: '#00843d' }} />
+          <div className="footer-tricolor" aria-hidden="true">
+            <span /><span /><span />
           </div>
 
           <p className="footer-description">{content.description}</p>
