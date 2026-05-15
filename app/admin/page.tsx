@@ -364,7 +364,9 @@ export default function AdminPage() {
 
     const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
 
-    const message = `Bonjour ${request.full_name} 👋\nVoici votre carte de membre AEMM officielle ✅\n\n${cartePageUrl}`;
+    const message = request.lang === 'ar'
+      ? `مرحباً ${request.full_name}\nإليك بطاقة عضويتك الرسمية في رابطة الطلاب الموريتانيين بالمغرب\n\n${cartePageUrl}`
+      : `Bonjour ${request.full_name}\nVoici votre carte de membre AEMM officielle\n\n${cartePageUrl}`;
 
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
   };

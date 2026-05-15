@@ -1,6 +1,29 @@
 'use client';
 
-export default function CarteClient({ name, cardUrl }: { name: string; cardUrl: string }) {
+const t = {
+  fr: {
+    title: (name: string) => `Carte de membre — ${name}`,
+    btn: 'Télécharger ma carte',
+    dir: 'ltr' as const,
+  },
+  ar: {
+    title: (name: string) => `بطاقة العضو — ${name}`,
+    btn: 'تحميل بطاقتي',
+    dir: 'rtl' as const,
+  },
+};
+
+export default function CarteClient({
+  name,
+  cardUrl,
+  lang,
+}: {
+  name: string;
+  cardUrl: string;
+  lang: 'fr' | 'ar';
+}) {
+  const txt = t[lang] ?? t.fr;
+
   const handleDownload = async () => {
     const res = await fetch(cardUrl);
     const blob = await res.blob();
@@ -12,7 +35,7 @@ export default function CarteClient({ name, cardUrl }: { name: string; cardUrl: 
   };
 
   return (
-    <div style={{
+    <div dir={txt.dir} style={{
       background: '#dde1e8',
       minHeight: '100vh',
       width: '100%',
@@ -22,7 +45,7 @@ export default function CarteClient({ name, cardUrl }: { name: string; cardUrl: 
       justifyContent: 'center',
       padding: '24px 16px',
       gap: '20px',
-      fontFamily: 'Segoe UI, sans-serif',
+      fontFamily: lang === 'ar' ? 'Arial, sans-serif' : 'Segoe UI, sans-serif',
       boxSizing: 'border-box',
     }}>
       <p style={{
@@ -32,7 +55,7 @@ export default function CarteClient({ name, cardUrl }: { name: string; cardUrl: 
         textAlign: 'center',
         margin: 0,
       }}>
-        Carte de membre — {name}
+        {txt.title(name)}
       </p>
 
       <div style={{
@@ -63,7 +86,7 @@ export default function CarteClient({ name, cardUrl }: { name: string; cardUrl: 
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          fontFamily: 'Segoe UI, sans-serif',
+          fontFamily: lang === 'ar' ? 'Arial, sans-serif' : 'Segoe UI, sans-serif',
         }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -71,7 +94,7 @@ export default function CarteClient({ name, cardUrl }: { name: string; cardUrl: 
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Télécharger ma carte
+        {txt.btn}
       </button>
     </div>
   );

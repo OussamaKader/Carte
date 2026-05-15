@@ -15,7 +15,7 @@ export default async function CartePage({
 
   const { data } = await supabase
     .from('card_requests')
-    .select('full_name, card_image_url')
+    .select('full_name, card_image_url, lang')
     .eq('id', id)
     .single();
 
@@ -32,5 +32,11 @@ export default async function CartePage({
     );
   }
 
-  return <CarteClient name={data.full_name} cardUrl={data.card_image_url} />;
+  return (
+    <CarteClient
+      name={data.full_name}
+      cardUrl={data.card_image_url}
+      lang={data.lang}
+    />
+  );
 }
