@@ -13,30 +13,30 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Carte AEM — Association des Étudiants Mauritaniens au Maroc",
-  description: "Créez votre carte officielle de membre AEM en quelques minutes.",
+  title: "Carte AEMM — Association des Étudiants Mauritaniens au Maroc",
+  description: "Créez votre carte officielle de membre AEMM en quelques minutes.",
 
   openGraph: {
-    title: "Carte AEM",
-    description: "Obtenez votre carte officielle de membre AEM",
+    title: "Carte AEMM",
+    description: "Obtenez votre carte officielle de membre AEMM",
     url: "https://www.oussamakader.best",
-    siteName: "AEM Maroc",
-    images: [{ url: "/vercel.svg", width: 800, height: 800 }],
+    siteName: "AEMM Carte",
+    images: [{ url: "/og-image.svg", width: 800, height: 800 }],
     locale: "fr_FR",
     type: "website",
   },
 
   twitter: {
     card: "summary",
-    title: "Carte AEM",
-    description: "Obtenez votre carte officielle de membre AEM",
-    images: ["/vercel.svg"],
+    title: "Carte AEMM",
+    description: "Obtenez votre carte officielle de membre AEMM",
+    images: ["/og-image.svg"],
   },
 
   icons: {
-    icon: "/vercel.svg",
-    shortcut: "/vercel.svg",
-    apple: "/vercel.svg",
+    icon: "/og-image.svg",
+    shortcut: "/og-image.svg",
+    apple: "/og-image.svg",
   },
 };
         
