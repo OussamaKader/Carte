@@ -351,15 +351,17 @@ export default function AdminPage() {
       return;
     }
 
-    const cartePageUrl = `https://oussamakader.best/c/${request.id}`;
+    // URL directe vers la page carte
+    const cartePageUrl = `https://oussamakader.best/carte/${request.id}`;
 
-    // Raccourcir l'URL
+    // Raccourcir avec TinyURL
     let shortUrl = cartePageUrl;
     try {
       const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(cartePageUrl)}`);
-      shortUrl = await res.text();
+      const text = await res.text();
+      if (text.startsWith('https://')) shortUrl = text.trim();
     } catch {
-      shortUrl = cartePageUrl; // fallback si TinyURL échoue
+      shortUrl = cartePageUrl;
     }
 
     const message = request.lang === 'ar'
