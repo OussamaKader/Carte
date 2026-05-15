@@ -28,7 +28,7 @@ export const translations = {
     numberPlaceholder: 'Ex : 36427169',
     cityLabel: 'Ville',
     whatsappLabel: 'Numéro WhatsApp',
-    whatsappPlaceholder: 'votre numero whatsapp',
+    whatsappPlaceholder: 'Votre numéro WhatsApp',
     paymentLabel: 'Capture du paiement',
     paymentText: 'Cliquez pour ajouter la capture',
     removePayment: ' Supprimer la capture',
